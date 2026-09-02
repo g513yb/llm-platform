@@ -16,8 +16,11 @@ MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-7B-Instruct")
 MODEL_SHORT_NAME = MODEL_NAME.split("/")[-1]
 
 # —— 设备 / 精度 ——
-FORCE_DEVICE = None      # None=自动探测；"cuda" 强制；"cpu" 仅用于本地调试（7B 会极慢/报错）
-QUANTIZATION = "none"    # "none" | "8bit"（需安装 bitsandbytes 且必须有 GPU）
+# FORCE_DEVICE：None=自动探测（优先认 FORCE_DEVICE）；"cuda" 强制；"cpu" 仅本地调试（7B 会极慢/报错）。
+# 可用环境变量覆盖，便于本机调试不污染云端默认。
+FORCE_DEVICE = os.environ.get("FORCE_DEVICE")   # None 或 "cuda"/"cpu"
+# QUANTIZATION：可被环境变量覆盖；云端默认 "none"；本地 12GB 显存跑 7B 用 "4bit"。
+QUANTIZATION = os.environ.get("QUANTIZATION", "none")   # "none" | "8bit" | "4bit"（8bit/4bit 需 bitsandbytes + GPU）
 
 # —— 生成默认参数（对话 Tab 使用）——
 GENERATION = dict(

@@ -7,7 +7,7 @@ from typing import Optional
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from config import MODEL_NAME, QUANTIZATION, DEFAULT_DEVICE_MAP
+from config import MODEL_NAME, QUANTIZATION, DEFAULT_DEVICE_MAP, FORCE_DEVICE
 
 _model = None
 _tokenizer = None
@@ -15,11 +15,15 @@ _device = None
 
 
 def _pick_device() -> str:
+    # 显式指定优先（本地调试：FORCE_DEVICE="cpu"/"cuda"）；未指定才自动探测。
+    if FORCE_DEVICE:
+        return FORCE_DEVICE
     if torch.cuda.is_available():
         return "cuda"
     raise RuntimeError(
         "CUDA 不可用：运行本应用需要 GPU 才能加载基座模型。\n"
-        "请在 AutoDL 等 GPU 实例上运行，或把 config.MODEL_NAME 换成可 CPU 推理的小模型。"
+        "请在 AutoDL 等 GPU 实例上运行，或把 config.MODEL_NAME 换成可 CPU 推理的小模型，"
+        "或用 env QUANTIZATION=4bit + FORCE_DEVICE=cpu 在本地小模型上调试。"
     )
 
 
@@ -47,9 +51,17 @@ def load_model(device_map: Optional[str] = None):
         _tokenizer.pad_token = _tokenizer.eos_token
 
     kwargs = {"torch_dtype": dtype, "device_map": device_map or DEFAULT_DEVICE_MAP}
-    if QUANTIZATION == "8bit":
+    if QUANTIZATION in ("8bit", "4bit"):
         from transformers import BitsAndBytesConfig
-        kwargs["quantization_config"] = BitsAndBytesConfig(load_in_8bit=True)
+        if QUANTIZATION == "8bit":
+            kwargs["quantization_config"] = BitsAndBytesConfig(load_in_8bit=True)
+        else:  # "4bit"：NF4 双量化，质量/显存权衡更优（12GB 跑 7B 用这个）
+            kwargs["quantization_config"] = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=dtype,
+                bnb_4bit_use_double_quant=True,
+            )
 
     # transforms>=4.37 原生识别 Qwen2/Qwen2.5，无需 trust_remote_code
     _model = AutoModelForCausalLM.from_pretrained(MODEL_NAME, **kwargs)

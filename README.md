@@ -122,13 +122,32 @@ llm-platform/
   .venv-verify\Scripts\python -c "from llm_platform.data_pipeline import run_pipeline; ..."
   ```
   > `.venv-verify` 只装了 pandas/numpy（几十 MB）；Windows 控制台打印中文可能乱码，`set PYTHONIOENCODING=utf-8` 可避免。
-- **推理/训练必须 GPU**（聊天、模型加载），只在云端跑。
+- **推理/训练需要 GPU**（聊天、模型加载）。本机若无 GPU，推理/训练只在云端跑；有 NVIDIA GPU 的机器可直接本地跑（见下节）。
+
+### 本机 GPU 运行（可选，需 NVIDIA 独显 + 已下模型）
+
+模型路径与量化走**环境变量**驱动（不污染云端默认）；本机 12GB 显存跑 7B 用 4bit 量化。
+
+```bat
+rem ① 一次性建本地环境（仅在有 GPU 的机器上；会装 CUDA torch + requirements + bitsandbytes）
+setup_local.bat
+
+rem ② 指定本地模型目录（或直接把路径填进 run_local.bat）
+set MODEL_NAME=D:\models\Qwen2.5-7B-Instruct
+
+rem ③ 启动（内部设 QUANTIZATION=4bit）
+run_local.bat
+rem → 浏览器打开 http://127.0.0.1:7860 进入「对话」
+```
+
+> 说明：云端脚本不设 `QUANTIZATION`/`FORCE_DEVICE`，默认仍是 `"none"`/自动探测，**云端行为不受影响**。
 
 ### 切换模型
 `config.py`：
 ```python
-MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"   # 可换同系列 1.5B/14B
-QUANTIZATION = "none"                     # "none" | "8bit"（需装 bitsandbytes）
+MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"   # 可换同系列 1.5B/14B；或本机本地路径（也可用 env MODEL_NAME 覆盖）
+QUANTIZATION = "none"                     # "none" | "8bit" | "4bit"（8bit/4bit 需装 bitsandbytes + GPU；12GB 跑 7B 用 4bit）
+FORCE_DEVICE = None                       # None=自动探测；"cuda"/"cpu" 强制（本地调试）
 ```
 
 ## 数据治理用法
