@@ -62,17 +62,18 @@ llm-platform 的「数据治理」可直接读取阿里/清华等来源的**医�
 - 预设：**legal_qa（宽松）**（默认严格 legal_cn 会因无文书结构而丢弃）。
 
 ### LawBench
-- 仓库：https://github.com/CSH-LawBench/LawBench
-- 性质：法律基准，含法条检索 / 判决预测 / 法律问答 / 法条摘要等子任务。
-- 获取：`git clone`；`data/` 下每任务一个 jsonl。
+- 仓库：**https://github.com/open-compass/LawBench**（原给出的 CSH-LawBench/LawBench 已 404；相关镜像 [open-mmlab-12/LawBench](https://github.com/open-mmlab-12/LawBench)）
+- 性质：法律基准（OpenCompass 集成，20 任务 × 500 例），含法条检索 / 判决预测 / 法律问答 / 法条摘要等。
+- 获取：`git clone https://github.com/open-compass/LawBench`；`data/` 下每任务一个 jsonl。
 - 字段：各任务不一；本平台支持 **问答(`question/answer`)** 与 **摘要(`article/summary`)** 形态；**法条检索 / 判决预测为评测负载，留待后续「多维度评测」Sprint**。
 - 预设：**legal_qa（宽松）**。
 
-### Chinese-Law-Doc
-- 仓库：https://github.com/liuhuanyong/Chinese-Law-Doc
-- 性质：中文法律文书 / 合同 / 法规 / 案例 **raw 文本**。
-- 获取：`git clone`；按文件夹（如 law_doc / law_contract / law_justice）内含 `.txt`。
-- 字段：纯文本；llm-platform 的 `txt_generator` 会自动按文书类型合成问答对：**法规→抽取第X条**、**判决书→案号/当事人/本院认为/判决**、**合同→甲方/乙方/标的/关键条款**。
+### Chinese-Law-Doc（中文法律文书语料）
+- 仓库：**https://github.com/liuhuanyong/LawCrimeMining**（裁判文书 ≈10.8 万 + 犯罪案例 ≈6.3 万，raw 文本；原给出的 `liuhuanyong/Chinese-Law-Doc` 已 404）
+- 另有：**https://github.com/liuhuanyong/CrimeKgAssitant**（犯罪知识图谱 856 类 + 约 20 万法务问答）
+- 性质：中文裁判文书/犯罪案例 **raw 文本**。
+- 获取：`git clone`；按文件夹含 `.txt` 文书。
+- 字段：纯文本；llm-platform 的 `txt_generator` 自动按文书类型合成问答对：**法规→抽取第X条**、**判决书→案号/当事人/本院认为/判决**、**合同→甲方/乙方/标的/关键条款**。
 - 预设：合成后在「法律」预设选 **legal_cn（文书严格）** 或 legal_qa。
 
 ---
