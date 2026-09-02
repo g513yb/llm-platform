@@ -39,33 +39,53 @@ class DeidStage(Stage):
         return out, issues
 
     def _apply_bare(self, text, g, res, issues):
-        edits = []
+        # 尊重 level：cleaned 才抹除文本；annotated 仅标注待人工确认（低置信不抹除）。
+        erase = g.get("level", "cleaned") == "cleaned"
+        edits, anns = [], []
         for mm in g["pat"].finditer(text):
             if res.overlaps_protected(text, mm.start(), mm.end()):
                 continue
-            edits.append((mm.start(), mm.end(), g["replacement"]))
+            if erase:
+                edits.append((mm.start(), mm.end(), g["replacement"]))
+            else:
+                anns.append(mm.group(0))
         if edits:
             for s, e, rep in reversed(edits):
                 text = text[:s] + rep + text[e:]
-            issues.append(Issue("deid", f"deid.{g['id']}", g.get("level", "cleaned"),
+            issues.append(Issue("deid", f"deid.{g['id']}", "cleaned",
                                 f"脱敏 {g['id']}：{len(edits)} 处"))
+        if anns:
+            issues.append(Issue("deid", f"deid.{g['id']}.annotate", "annotated",
+                                f"疑似 {g['id']} 待人工确认：{len(anns)} 处"))
         return text, issues
 
     def _apply_anchor(self, text, g, res, issues):
         exclude = set(g.get("exclude", []))
-        edits = []
+        exclude_after = g.get("exclude_after", [])
+        # 尊重 level：cleaned 才抹除文本；annotated 仅标注待人工确认（低置信不抹除）。
+        erase = g.get("level", "cleaned") == "cleaned"
+        edits, anns = [], []
         for mm in g["context_pat"].finditer(text):
             val = mm.group(2) if (mm.lastindex and mm.lastindex >= 2) else ""
             if val in exclude:
                 continue
+            # 前缀命中常见动词/助词 => 非姓名，跳过（不抹除也不标注）
+            if any(val.startswith(t) for t in exclude_after):
+                continue
             if res.overlaps_protected(text, mm.start(), mm.end()):
                 continue
-            edits.append((mm.start(), mm.end(), f"{mm.group(1)}：{g['replacement']}"))
+            if erase:
+                edits.append((mm.start(), mm.end(), f"{mm.group(1)}：{g['replacement']}"))
+            else:
+                anns.append(val)
         if edits:
             for s, e, rep in reversed(edits):
                 text = text[:s] + rep + text[e:]
-            issues.append(Issue("deid", f"deid.{g['id']}", g.get("level", "cleaned"),
+            issues.append(Issue("deid", f"deid.{g['id']}", "cleaned",
                                 f"脱敏 {g['id']}：{len(edits)} 处"))
+        if anns:
+            issues.append(Issue("deid", f"deid.{g['id']}.annotate", "annotated",
+                                f"疑似 {g['id']} 待人工确认：{len(anns)} 处"))
         return text, issues
 
     def _apply_names(self, text, g, res, guard, issues):

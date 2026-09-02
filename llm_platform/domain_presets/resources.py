@@ -89,6 +89,7 @@ class ResourceBundle:
                 e["context_pat"] = re.compile(rf"({anchors})\s*[:：]?\s*({g['pattern']})")
                 e["_enclosing"] = f"{g.get('replacement','')}"
                 e["exclude"] = g.get("exclude", [])
+                e["exclude_after"] = g.get("exclude_after", [])
                 self.deid_groups.append(e)
             else:
                 e["pat"] = re.compile(g["pattern"])

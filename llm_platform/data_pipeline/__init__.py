@@ -130,7 +130,10 @@ def format_summary(s: PipelineSummary) -> str:
     lines = [
         f"**总数** {s.total} | **保留** {s.kept} | **丢弃** {s.dropped}",
         "",
-        "**阶段处置**" + ("（无领域阶段）" if not s.stage_issues else ""),
+        "**阶段处置（清洗改写）**" + ("（无领域阶段）" if not s.stage_cleaned else ""),
+        "  - " + "；".join(f"{k}: {v}" for k, v in sorted(s.stage_cleaned.items())) or "—",
+        "",
+        "**阶段命中（含标注，口径偏大）**",
         "  - " + "；".join(f"{k}: {v}" for k, v in sorted(s.stage_issues.items())) or "—",
         "",
         "**丢弃原因分布**",
