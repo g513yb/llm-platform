@@ -5,6 +5,7 @@
 > 当前进度：**Sprint 0 + Sprint 1 已完成**（工作台 + Qwen 流式对话 + 数据治理）；训练/权重/评测为后续 Sprint。
 >
 > 📄 开发环境、部署链路与全部配置项见 **[docs/ENVIRONMENT.md](./docs/ENVIRONMENT.md)**。
+> 📄 支持的数据集与获取/字段/预设用法见 **[docs/DATASETS.md](./docs/DATASETS.md)**。
 
 ## 全貌（功能全景）
 
