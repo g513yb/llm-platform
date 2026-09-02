@@ -31,7 +31,7 @@
   - Alpaca：`{instruction, input(可选), output}`（或中文 `指令/输入/输出`）
   - ShareGPT：`{"messages":[{role,content}...]}`
   - CSV：`instruction/input/output` 列，或 `id/role/content` 长表、`ask/question+answer` 问答列；编码 `utf-8-sig → gbk → utf-8` 自动回退
-  - **医疗数据集**：CMB-Exam(`question_type/option/answer`)、CMB-Clin(`QA_pairs`，一条→多条)、Toyhom(`department/title/ask/answer`)
+  - **医疗数据集**：CMB-Exam(`question_type/option/answer`)、CMB-Clin(`QA_pairs`，一条→多条)、Toyhom(`department/title/ask/answer`)、MedQA(`options/answer_idx`)、Huatuo-26M(`question/response`)
   - **纯文本**：医疗/法律经 `txt_generator` **领域规则抽取** 自动合成 ShareGPT 问答对（见下）；其余领域纯文本暂不支持
 - **清洗**：通用逐轮（编码/全半角/空白/去标签）+ 语料级去重（精确 sha1 + 近似 bigram Jaccard）
 - **领域预设**：阶段化引擎级联跑（见下节）
