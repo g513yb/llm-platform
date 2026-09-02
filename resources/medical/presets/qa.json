@@ -1,0 +1,11 @@
+{
+  "name": "medical_qa",
+  "description": "医疗问答/考试（宽松）：脱敏+术语+单位+质量分，不要求主诉/诊断结构化",
+  "stages": [
+    {"kind": "deid"},
+    {"kind": "terminology"},
+    {"kind": "units"},
+    {"kind": "quality_score"}
+  ],
+  "qc": {"mode": "pair"}
+}

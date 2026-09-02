@@ -391,7 +391,14 @@ class QualityScoreStage(Stage):
 
     def run(self, item: WorkItem, ctx):
         qc = ctx.resources.qc
-        if qc.get("mode") == "sections":
+        mode = qc.get("mode")
+        if mode == "pair":
+            # 宽松问答/考试：不要求结构，仅看 user/assistant 均有内容
+            has_u = any(str(m.get("content", "")).strip() for m in item.user_turns())
+            has_a = any(str(m.get("content", "")).strip() for m in item.assistant_turns())
+            item.meta["domain_score"] = round(0.9 if (has_u and has_a) else 0.2, 3)
+            return item, []
+        if mode == "sections":
             total_w = sum(qc.get("score_weights", {}).values()) or 1
             struct = item.meta.get("structure_score", 0) / total_w
             completeness = 0.0 if item.meta.get("missing_required") else 1.0

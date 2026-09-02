@@ -12,7 +12,7 @@ from pathlib import Path
 from .engine import (
     DomainPreset, Issue, PipelineCtx, Stage, StageStats, WorkItem,
 )
-from .resources import RESOURCE_DIR, ResourceBundle
+from .resources import RESOURCE_DIR, ResourceBundle, _load, find_preset_config
 from .stages_generic import (  # noqa: F401
     CompletenessQCStage, DeidStage, MarkerNormalizeStage, NumericStage,
     QualityScoreStage, SectionStage, TerminologyStage, UnitsStage,
@@ -41,18 +41,20 @@ def make_stage(kind: str, params: dict | None = None) -> Stage:
     return cls(name=kind, params=p, enabled=p.get("enabled", True))
 
 
-def make_ctx(slug: str, params: dict | None = None, resource_dir: Path | None = None) -> PipelineCtx:
-    bundle = ResourceBundle.load(slug, resource_dir)
+def make_ctx(slug: str, params: dict | None = None, resource_dir: Path | None = None,
+             preset: str | None = None) -> PipelineCtx:
+    bundle = ResourceBundle.load(slug, preset=preset, resource_dir=resource_dir)
     return PipelineCtx(slug=slug, params=params or {}, resources=bundle)
 
 
-def build_preset(slug: str, resource_dir: Path | None = None) -> DomainPreset:
-    """从 resources/<slug>/preset.json 构建预设；缺失则回落通用（仅质量过滤）。"""
-    ctx = make_ctx(slug, resource_dir=resource_dir)
-    p = resource_dir or RESOURCE_DIR
-    preset_path = p / slug / "preset.json"
-    if preset_path.exists():
-        return DomainPreset.from_json(preset_path, ctx)
+def build_preset(slug: str, preset: str | None = None, ctx: PipelineCtx | None = None,
+                 resource_dir: Path | None = None) -> DomainPreset:
+    """从 resources/<slug>/preset.json 或 presets/<name>.json 构建预设；缺失回落通用。"""
+    if ctx is None:
+        ctx = make_ctx(slug, resource_dir=resource_dir, preset=preset)
+    cfg = ctx.resources.preset
+    if cfg and cfg.get("stages"):
+        return DomainPreset.from_dict(cfg, ctx)
     return default_preset(ctx)
 
 
@@ -61,9 +63,35 @@ def default_preset(ctx: PipelineCtx | None = None) -> DomainPreset:
                         [QualityScoreStage("quality_score")])
 
 
-def discover_presets(resource_dir: Path | None = None) -> list[str]:
-    """列出存在 preset.json 的领域 slug。"""
-    p = resource_dir or RESOURCE_DIR
-    if not p.exists():
+def discover_presets(slug: str | None = None, resource_dir: Path | None = None) -> list[str]:
+    """res目录下领域 slug；或指定 slug 时列出其命名预设名。无参时返回 slugs（向后兼容）。"""
+    res = resource_dir or RESOURCE_DIR
+    if not res.exists():
         return []
-    return sorted(d.name for d in p.iterdir() if (d / "preset.json").exists())
+    if slug is not None:
+        names = []
+        dp = find_preset_config(slug, None, res)
+        if dp:
+            cfg = _load(dp) or {}
+            names.append(cfg.get("name", "default"))
+        pd_ = res / slug / "presets"
+        if pd_.exists():
+            for f in sorted(pd_.glob("*.json")):
+                cfg = _load(f) or {}
+                nm = cfg.get("name", f.stem)
+                if nm not in names:
+                    names.append(nm)
+        return names
+    return sorted(d.name for d in res.iterdir()
+                  if d.is_dir() and ((d / "preset.json").exists() or (d / "presets").exists()))
+
+
+def preset_options(slug: str, resource_dir: Path | None = None) -> list[tuple[str, str]]:
+    """该领域可选预设（label, name）。"""
+    res = resource_dir or RESOURCE_DIR
+    out = []
+    for nm in discover_presets(slug, res):
+        p = find_preset_config(slug, nm, res)
+        cfg = _load(p) if p else {}
+        out.append((f"{cfg.get('description') or nm}({slug}/{nm})", nm))
+    return out or [(f"{slug} 通用", None)]

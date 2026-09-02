@@ -66,7 +66,7 @@ def _preview_row(it: WorkItem) -> dict:
 
 
 def run_pipeline(domain_label: str, file_paths: list[str] | None = None,
-                 texts: list[str] | None = None,
+                 texts: list[str] | None = None, preset: str | None = None,
                  min_len: int = 10, max_len: int = 2000,
                  dedup: bool = True, score_cutoff: float = 0.4) -> PipelineSummary:
     slug = label_to_slug(domain_label)
@@ -81,7 +81,7 @@ def run_pipeline(domain_label: str, file_paths: list[str] | None = None,
 
     params = {"min_len": int(min_len), "max_len": int(max_len),
               "dedup": bool(dedup), "score_cutoff": float(score_cutoff)}
-    ctx = make_ctx(slug, params)
+    ctx = make_ctx(slug, params, preset=preset)
 
     items, meta = read_inputs(paths, read_txt_raw=make_txt_reader(slug))
 
@@ -90,7 +90,7 @@ def run_pipeline(domain_label: str, file_paths: list[str] | None = None,
         it.issues.extend(generic_clean(it))
 
     # 2) 领域预设级联
-    preset = build_preset(slug) or default_preset(ctx)
+    preset = build_preset(slug, preset=preset, ctx=ctx) or default_preset(ctx)
     for it in items:
         preset.run(it, ctx)
 

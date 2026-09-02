@@ -7,8 +7,8 @@ import re
 import gradio as gr
 
 from llm_platform.data_pipeline import format_summary, run_pipeline
-from llm_platform.domain import default_preset_name, labels
-from llm_platform.domain_presets import discover_presets
+from llm_platform.domain import labels, slug as label_to_slug
+from llm_platform.domain_presets import preset_options
 
 TITLE = "数据治理"
 
@@ -16,14 +16,12 @@ PREVIEW_HEADERS = ["id", "状态", "处置原因", "主要问题"]
 
 
 def build(domain: str):
-    slug = domain
-    preset_names = discover_presets() or ["generic"]
-
     with gr.Column():
         gr.Markdown("### 数据治理")
         with gr.Accordion("数据源（仅用户上传）", open=True):
             domain_dd = gr.Dropdown(choices=labels(), value=domain, label="领域（清洗预设按此切换）")
-            preset_dd = gr.Dropdown(choices=preset_names, value=default_preset_name(domain) or "generic",
+            opts = preset_options(label_to_slug(domain))
+            preset_dd = gr.Dropdown(choices=opts, value=(opts[0][1] if opts else None),
                                     label="领域预设（资源驱动，改 resources/ 词表即可扩展）")
             files = gr.File(file_count="multiple", type="filepath",
                             label="上传数据（.json / .jsonl / .csv / .txt）")
@@ -44,6 +42,10 @@ def build(domain: str):
                               lines=2, show_copy_button=True)
         out_file = gr.File(label="下载 ShareGPT jsonl", interactive=True)
 
+        def _refresh_presets(dom):
+            o = preset_options(label_to_slug(dom))
+            return gr.update(choices=o, value=(o[0][1] if o else None))
+
         def _run(preset, domain_lab, fpaths, mn, mx, cut, dd, paste):
             paths = _as_list(fpaths)
             texts = _split_paste(paste)
@@ -52,7 +54,8 @@ def build(domain: str):
             try:
                 res = run_pipeline(domain_lab, file_paths=paths, texts=texts,
                                    min_len=mn or 0, max_len=mx or 2000,
-                                   dedup=bool(dd), score_cutoff=cut or 0.0)
+                                   dedup=bool(dd), score_cutoff=cut or 0.0,
+                                   preset=preset or None)
             except ValueError as e:
                 return f"⚠ {e}", [], "", gr.update()
             except Exception as e:  # noqa: BLE001
@@ -62,6 +65,7 @@ def build(domain: str):
             return (format_summary(res), rows,
                     "\n".join(res.output_files), gr.update(value=download))
 
+        domain_dd.change(_refresh_presets, [domain_dd], [preset_dd])
         run_btn.click(_run, [preset_dd, domain_dd, files, min_len, max_len, score_cutoff, dedup, paste],
                       [stats, preview, out_path, out_file])
 

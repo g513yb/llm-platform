@@ -23,6 +23,27 @@ def _load(path: Path) -> dict | None:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def find_preset_config(slug: str, preset: str | None,
+                       resource_dir: Path | None = None) -> Path | None:
+    """解析命名预设对应的文件（默认 <slug>/preset.json；否则 <slug>/presets/<name>.json，
+    并按 config['name'] 回退，如 'medical_cn' 命中 preset.json）。"""
+    res_dir = resource_dir or RESOURCE_DIR
+    dom = res_dir / slug
+    if preset in (None, "", "default"):
+        for cand in (dom / "preset.json", dom / "presets" / "default.json"):
+            if cand.exists():
+                return cand
+        return None
+    cand = dom / "presets" / f"{preset}.json"
+    if cand.exists():
+        return cand
+    for p in [dom / "preset.json"] + sorted((dom / "presets").glob("*.json")):
+        cfg = _load(p)
+        if cfg and cfg.get("name") == preset:
+            return p
+    return None
+
+
 def compile_norm(table: dict | None, key: str = "normalize") -> list:
     """把 {<key>:[{pattern,replacement}]} 编译成 [(compiled_re, replacement), ...]"""
     if not table:
@@ -190,8 +211,9 @@ class ResourceBundle:
 
 
     @classmethod
-    def load(cls, slug: str, resource_dir: Path | None = None) -> "ResourceBundle":
-        """加载 <slug>/ 与 _shared/，领域覆盖共享。
+    def load(cls, slug: str, preset: str | None = None,
+             resource_dir: Path | None = None) -> "ResourceBundle":
+        """加载 <slug>/ 与 _shared/，领域覆盖共享；preset 决定 preset.json / presets/<name>.json。
         缺失表回落共享，仍缺失则为空 dict；坏表带警告跳过（不整体失败）。
         """
         res_dir = resource_dir or RESOURCE_DIR
@@ -205,11 +227,14 @@ class ResourceBundle:
             # 仅当领域有该文件才覆盖；否则用共享；都没有则空 dict
             rail[name] = tmp if tmp is not None else shared_merged[name]
 
-        # preset.json 单独读
-        preset = _load(domain / "preset.json")
+        # 解析命名预设（或默认 preset.json）
+        cfg_path = find_preset_config(slug, preset, res_dir)
+        config = _load(cfg_path) if cfg_path else {}
+        if isinstance(config.get("qc"), dict):   # 预设级 qc 覆盖（浅覆盖）
+            rail["qc"] = {**rail["qc"], **config["qc"]}
 
-        bundle = cls(slug=slug, rail={**rail, "preset": preset or {}})
-        bundle.preset = preset or {}
+        bundle = cls(slug=slug, rail={**rail, "preset": config})
+        bundle.preset = config or {}
         # 读取 _meta（schema_version 门控，仅提示）
         meta = _load(domain / "_meta.json")
         if meta and meta.get("schema_version", 1) > 1:

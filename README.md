@@ -3,6 +3,8 @@
 基于 **PyTorch + HuggingFace Transformers + PEFT(LoRA)** 的多领域大模型训练与评测平台。核心是一条完整闭环：**选领域 → 治理数据 → LoRA 微调 → 保存权重 → 复用对话 → 多维度评测 → 跨领域对比**。
 
 > 当前进度：**Sprint 0 + Sprint 1 已完成**（工作台 + Qwen 流式对话 + 数据治理）；训练/权重/评测为后续 Sprint。
+>
+> 📄 开发环境、部署链路与全部配置项见 **[docs/ENVIRONMENT.md](./docs/ENVIRONMENT.md)**。
 
 ## 全貌（功能全景）
 
@@ -28,7 +30,8 @@
 - **输入格式**（`read_inputs`，`.json/.jsonl/.csv/.txt`）：
   - Alpaca：`{instruction, input(可选), output}`（或中文 `指令/输入/输出`）
   - ShareGPT：`{"messages":[{role,content}...]}`
-  - CSV：`instruction/input/output` 列，或 `id/role/content` 长表；编码 `utf-8-sig → gbk → utf-8` 自动回退
+  - CSV：`instruction/input/output` 列，或 `id/role/content` 长表、`ask/question+answer` 问答列；编码 `utf-8-sig → gbk → utf-8` 自动回退
+  - **医疗数据集**：CMB-Exam(`question_type/option/answer`)、CMB-Clin(`QA_pairs`，一条→多条)、Toyhom(`department/title/ask/answer`)
   - **纯文本**：医疗/法律经 `txt_generator` **领域规则抽取** 自动合成 ShareGPT 问答对（见下）；其余领域纯文本暂不支持
 - **清洗**：通用逐轮（编码/全半角/空白/去标签）+ 语料级去重（精确 sha1 + 近似 bigram Jaccard）
 - **领域预设**：阶段化引擎级联跑（见下节）
@@ -42,7 +45,7 @@
 - **引擎**（`domain_presets/`）：`Stage`（可插拔处理器）/ `WorkItem`（单样本）/ `Issue`（清理·标注·警告·丢弃）/ `DomainPreset`（有序 stage，由 preset.json 数据驱动）/ `PipelineCtx`（已编译资源）/ `StageStats`。
 - **通用阶段**（`stages_generic`）：deid / section / terminology / units / completeness_qc / quality_score / marker_norm / numeric。
 - **法律专属阶段**（`stages_legal`）：`DocTypeStage`（文书类型识别）+ `LegalStructureStage`（文号规范化 + 编章节条款项层级树 + 分部）。
-- **医疗（深度）**：小节识别（主诉/现病史/过敏史/手术史/生命体征…，保序）、分层脱敏（姓名/复姓/身份证/手机/医保卡/就诊卡/机构，防误判）、术语接线（preserve + qd/bid→每日N次）、单位+化验值区间、跨小节一致性质检（诊断未在现病史 → warning）。
+- **医疗（深度）**：小节识别（主诉/现病史/过敏史/手术史/生命体征…，保序）、分层脱敏（姓名/复姓/身份证/手机/医保卡/就诊卡/机构，防误判）、术语接线（preserve + qd/bid→每日N次）、单位+化验值区间、跨小节一致性质检（诊断未在现病史 → warning）。医疗有**两个预设**：`medical_cn`（临床病历，严格，要求主诉/诊断）与 `medical_qa`（考试/问答，宽松，仅脱敏/术语/单位+质量分，用于 CMB/Toyhom）。
 - **法律（深度）**：当事人脱敏（保留案号/文号/日期/法院名绝不脱敏）、文书分部、编章条层级、`doc_type_checks` 文档类型感知质控（判决书缺要素 → drop；中文日期也匹配）。
 - **金融 / 教育**：同引擎 + 薄资源表（数值单位规范化 / 选项答案规范化）。
 
