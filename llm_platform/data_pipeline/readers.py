@@ -203,8 +203,16 @@ def _normalize(raw, base: str, rid: int) -> list:   # noqa: C901
         if q and s:
             return [_mk(rid, base, [{"role": "user", "content": q},
                                     {"role": "assistant", "content": s}])]
+    # ⑧ input+output（无 instruction/question/answer）-> 问答对（如 fingpt-sentiment-train: 文本→标签）
+    if ("input" in raw and "output" in raw and "instruction" not in raw
+            and "question" not in raw and "answer" not in raw):
+        u = str(raw.get("input", "")).strip()
+        o = str(raw.get("output", "")).strip()
+        if u and o:
+            return [_mk(rid, base, [{"role": "user", "content": u},
+                                    {"role": "assistant", "content": o}])]
 
-    raise ValueError(f"{base}#{rid}: 无法识别结构（需 Alpaca/ShareGPT/CMB/Toyhom/LawBench）")
+    raise ValueError(f"{base}#{rid}: 无法识别结构（需 Alpaca/ShareGPT/CMB/Toyhom/LawBench/FinEval/fingpt）")
 
 
 def _mk(rid: int, base: str, msgs) -> WorkItem:
@@ -245,7 +253,7 @@ def _exam_to_item(raw, base, rid) -> WorkItem:
         if exp and not re.fullmatch(r"[A-Za-z]+", exp):
             asst += f"\n解析：{exp}"
     else:
-        for k in ("explanation", "solution", "解析"):
+        for k in ("explanation", "Explanation", "solution", "解析"):
             if raw.get(k):
                 asst += f"\n解析：{str(raw[k]).strip()}"
                 break

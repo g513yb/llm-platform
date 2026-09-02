@@ -78,6 +78,25 @@ llm-platform 的「数据治理」可直接读取阿里/清华等来源的**医�
 
 ---
 
+## 金融
+
+### FinEval
+- 仓库：https://github.com/SUFE-AIFLM-Lab/FinEval
+- 性质：金融知识基准（约 2.6 万题）：**学术类选择题**（MCQ 4661 题）+ **行业类开放问答**（1434 题）等。
+- 获取：`git clone https://github.com/SUFE-AIFLM-Lab/FinEval`；数据在 `data-v2/`（JSONL，每行一个 dict）。
+- 字段：选择题 `question / options{A..D} / answer(字母) [+ Explanation]`；开放问答 `question / answer`。
+- 预设：**finance_qa（宽松）**。
+
+### fingpt-sentiment-train
+- HF 数据集：https://huggingface.co/datasets/FinGPT/fingpt-sentiment-train
+- 性质：金融情感倾向分类（一段金融文本 → 正/负/中性标签）。
+- 获取：`load_dataset("FinGPT/fingpt-sentiment-train")` → 导出 jsonl/csv。
+- 字段：`input（金融文本）/ output（情感标签）`。
+- 预设：**finance_qa（宽松）** —— 纯文本无数字/单位时 `finance_cn` 会因"必需数值指标"丢弃，故用宽松。
+
+### BloombergGPT
+- 说明：**无官方公开数据集**（模型与 FinPile 未开源，仅论文 [arXiv:2303.17564](https://arxiv.org/abs/2303.17564)）。本平台不提供摄入入口；如需金融语料请使用上面的 FinEval / fingpt。
+
 ## 预设选择对照
 
 | 数据 | 领域 | 推荐预设 |
@@ -87,8 +106,10 @@ llm-platform 的「数据治理」可直接读取阿里/清华等来源的**医�
 | Toyhom / MedQA / Huatuo-26M | 医疗 | medical_qa |
 | DISC-Law-SFT / LawBench(问答·摘要) | 法律 | legal_qa |
 | Chinese-Law-Doc（raw 文书）| 法律 | legal_cn（合成后）|
+| FinEval / fingpt-sentiment / 金融问答 | 金融 | finance_qa |
+| 金融数值研报（含 % / 亿元）| 金融 | finance_cn |
 
-> 医疗/法律各有两个预设：`medical_cn`/`medical_qa`、`legal_cn`/`legal_qa`；前者严格（要求结构/文书要素），后者宽松（仅脱敏/术语/单位 + 质量分），考试问答类选宽松，病历文书类选严格。
+> 医疗/法律/金融各有两个预设：`medical_cn`/`medical_qa`、`legal_cn`/`legal_qa`、`finance_cn`/`finance_qa`；前者严格（要求结构/文书/数值指标），后者宽松（仅脱敏/术语/质量分），考试问答类选宽松，病历/文书/数值类选严格。
 
 ## ⚠️ 注意（账号/地址可能变动）
 - **LawBench**（`github.com/CSH-LawBench/LawBench`）与 **Chinese-Law-Doc**（`github.com/liuhuanyong/Chinese-Law-Doc`）在本文核对时**返回 404**（可能已迁移/改名/私有化；同是 GitHub 的 MedQA 却可达，故非网络代理问题）。使用前请到对应平台搜索最新仓库；本表中的字段为本平台按已知格式识别（FAQ 问答/摘要），若仓库地址有变以上表链接站点为准。
