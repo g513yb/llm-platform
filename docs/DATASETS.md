@@ -38,8 +38,8 @@ llm-platform 的「数据治理」可直接读取阿里/清华等来源的**医�
 
 ### MedQA
 - 仓库：https://github.com/jind11/MedQA
-- 性质：USMLE 型医学单选题。
-- 获取：见仓库 README 下载链接（或 HuggingFace 镜像）→ 得到 `questions.jsonl`。
+- 性质：USMLE 型医学单选题（已按仓库 README 原文核对）。
+- 获取：数据经仓库 README 的 **Google Drive 链接**下载；含 US/中国大陆/台湾三个来源，均 **jsonl**（每行一个 dict），并提供 4 选项 / 5 选项版与官方 train/dev/test 划分 → 得到 `*_qbank.jsonl` 等，直接上传 jsonl。
 - 字段：`question / options{A..E} / answer_idx(字母) / answer(解析) / meta_info`
 - 预设：**medical_qa（宽松）**。
 
@@ -88,3 +88,7 @@ llm-platform 的「数据治理」可直接读取阿里/清华等来源的**医�
 | Chinese-Law-Doc（raw 文书）| 法律 | legal_cn（合成后）|
 
 > 医疗/法律各有两个预设：`medical_cn`/`medical_qa`、`legal_cn`/`legal_qa`；前者严格（要求结构/文书要素），后者宽松（仅脱敏/术语/单位 + 质量分），考试问答类选宽松，病历文书类选严格。
+
+## ⚠️ 注意（账号/地址可能变动）
+- **LawBench**（`github.com/CSH-LawBench/LawBench`）与 **Chinese-Law-Doc**（`github.com/liuhuanyong/Chinese-Law-Doc`）在本文核对时**返回 404**（可能已迁移/改名/私有化；同是 GitHub 的 MedQA 却可达，故非网络代理问题）。使用前请到对应平台搜索最新仓库；本表中的字段为本平台按已知格式识别（FAQ 问答/摘要），若仓库地址有变以上表链接站点为准。
+- **Huatuo-26M**、**DISC-Law-SFT** 为 HuggingFace 数据集（`load_dataset` 加载后转 jsonl/csv 上传），信息以 HF 卡片为准；Huatuo-26M 体量极大务必抽样。
