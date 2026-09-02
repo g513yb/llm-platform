@@ -1,6 +1,6 @@
 # 支持的数据集与使用说明
 
-llm-platform 的「数据治理」可直接读取阿里/清华等来源的**医疗、法律**公开数据集。本文给出各数据的**获取方式、字段、推荐预设、上传前处理**。上传后统一在「数据治理」Tab 选**领域 + 预设**即可清洗落盘。
+llm-platform 的「数据处理」可直接读取阿里/清华等来源的**医疗、法律**公开数据集。本文给出各数据的**获取方式、字段、推荐预设、上传前处理**。上传后统一在「数据处理」Tab 选**领域 + 预设**即可清洗落盘。
 
 > 说明：以下字段/加载方式按各仓库 README 与实测样本核对；因网络限制暂无法在线抓取部分卡片原文，加载名称以各仓库为准（均给出链接）。
 
@@ -11,10 +11,10 @@ llm-platform 的「数据治理」可直接读取阿里/清华等来源的**医�
   from datasets import load_dataset
   ds = load_dataset("FreedomIntelligence/Huatuo-26M", split="train").select(range(10000))  # 若太大先抽样
   ds.to_json("huatuo.jsonl")   # 或 ds.to_csv("huatuo.csv")
-  # 把 huatuo.jsonl 上传到「数据治理」即可
+  # 把 huatuo.jsonl 上传到「数据处理」即可
   ```
 - **GitHub 仓库**：`git clone <url>` 后，直接上传仓库里的 `.jsonl`/`.csv`；raw 文书 `.txt` 也支持（法律走规则抽取合成问答对）。
-- 上传后在「数据治理」Tab：选领域（医疗/法律/金融）→ 选**预设** → 选文件 → 运行治理 → 落盘 **Alpaca `{instruction,input,output}`**（训练用；`config.OUTPUT_FORMAT` 可切回 `sharegpt`）。
+- 上传后在「数据处理」Tab：选领域（医疗/法律/金融）→ 选**预设** → 选文件 → 运行治理 → 落盘 **Alpaca `{instruction,input,output}`**（训练用；`config.OUTPUT_FORMAT` 可切回 `sharegpt`）。
 
 ---
 

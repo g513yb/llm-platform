@@ -1,9 +1,9 @@
 # CLAUDE.md — 多域 LLM 微调与评测平台
 
 ## 项目是什么
-Gradio(BLOCKS) + PyTorch + HuggingFace Transformers + PEFT(LoRA) 的多领域大模型训练与评测平台。完整闭环：**选领域 → 数据治理 → LoRA微调 → 保存权重 → 复用对话 → 多维度评测 → 跨领域对比**。
+Gradio(BLOCKS) + PyTorch + HuggingFace Transformers + PEFT(LoRA) 的多领域大模型训练与评测平台。完整闭环：**选领域 → 数据处理 → LoRA微调 → 保存权重 → 复用对话 → 多维度评测 → 跨领域对比**。
 
-当前进度：**Sprint 0（工作台 + Qwen2.5-7B 流式对话）+ Sprint 1（数据治理 + 四领域数据集 + Alpaca 输出）完成**；训练/权重/评测为后续 Sprint。
+当前进度：**Sprint 0（工作台 + Qwen2.5-7B 流式对话）+ Sprint 1（数据处理 + 四领域数据集 + Alpaca 输出）完成**；训练/权重/评测为后续 Sprint。
 
 ## 关键设计
 - **内部统一格式 = ShareGPT**：`WorkItem.messages=[{"role","content"}...]`（引擎契约）。`readers` 接受多种输入（Alpaca/ShareGPT/CSV/CMB/MedQA/Toyhom/fingpt/MMLU/CMMLU/纯文本等），`_normalize` 全部转成 messages；清洗/质控阶段遍历 messages。
@@ -25,7 +25,7 @@ Gradio(BLOCKS) + PyTorch + HuggingFace Transformers + PEFT(LoRA) 的多领域大
 - **本地纯 CPU 验证**（无需 GPU/云）：`cd D:\claude\llm-platform && PYTHONIOENCODING=utf-8 .venv-verify/Scripts/python - <<'PY' … PY`（`.venv-verify` 仅 pandas/numpy）。
 - Git：`git add -A && git commit -m "…" && git push origin main`；仓库 `https://github.com/g513yb/llm-platform`；`gh` CLI 已装（`C:\Program Files\GitHub CLI\gh.exe`）。
 
-## 数据流（数据治理）
+## 数据流（数据处理）
 `run_pipeline(domain_label, file_paths, texts, preset, min_len, max_len, dedup, score_cutoff)`：
 reader(多格式→messages) → generic_clean → preset.run(阶段级联) → `_pick_drop`(drop级issue / domain_score<cutoff / 长度越界) → dedupe → io(messages→Alpaca)。返回 `PipelineSummary`。
 

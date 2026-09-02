@@ -2,7 +2,7 @@
 
 基于 **PyTorch + HuggingFace Transformers + PEFT(LoRA)** 的多领域大模型训练与评测平台。核心是一条完整闭环：**选领域 → 治理数据 → LoRA 微调 → 保存权重 → 复用对话 → 多维度评测 → 跨领域对比**。
 
-> 当前进度：**Sprint 0 + Sprint 1 已完成**（工作台 + Qwen 流式对话 + 数据治理）；训练/权重/评测为后续 Sprint。
+> 当前进度：**Sprint 0 + Sprint 1 已完成**（工作台 + Qwen 流式对话 + 数据处理）；训练/权重/评测为后续 Sprint。
 >
 > 📄 开发环境、部署链路与全部配置项见 **[docs/开发环境配置说明.md](./docs/开发环境配置说明.md)**。
 > 📄 支持的数据集与获取/字段/预设用法见 **[docs/DATASETS.md](./docs/DATASETS.md)**。
@@ -12,7 +12,7 @@
 ```
 ┌─ Gradio 工作台（顶部选领域 → 进入工作台）
 │   ├─ 对话        ✅ 加载 Qwen2.5-7B-Instruct，多轮对话 + 逐字流式（需 GPU）
-│   ├─ 数据治理    ✅ 上传/粘贴语料 → 清洗 + 领域预设 + 质量过滤 → ShareGPT 落盘 + 统计
+│   ├─ 数据处理    ✅ 上传/粘贴语料 → 清洗 + 领域预设 + 质量过滤 → ShareGPT 落盘 + 统计
 │   ├─ LoRA训练    ⏳ 占位（后续 Sprint）
 │   ├─ 权重管理    ⏳ 占位（后续 Sprint）
 │   └─ 多维度评测  ⏳ 占位（后续 Sprint）
@@ -27,7 +27,7 @@
 - **对话 Tab**：加载基座 `Qwen/Qwen2.5-7B-Instruct`，多轮上下文 + 流式输出；模型配置驱动（`config.MODEL_NAME` 一处换）。
 - **工作台骨架**：顶部领域下拉（医疗/法律/金融/教育）→ 进入工作台 → 五个 Tab；新增 Tab = 建模块 + 追加进 `TAB_REGISTRY` 即插即用。
 
-### Sprint 1 · 数据治理
+### Sprint 1 · 数据处理
 - **输入格式**（`read_inputs`，`.json/.jsonl/.csv/.txt`）：
   - Alpaca：`{instruction, input(可选), output}`（或中文 `指令/输入/输出`）
   - ShareGPT：`{"messages":[{role,content}...]}`
@@ -77,7 +77,7 @@ llm-platform/
     ├── model_manager.py       # 懒加载单例 load_model()，设备/精度探测
     ├── chat.py                # 对话管线：apply_chat_template + generate + 流式
     ├── domain.py              # 领域注册表 / slug / 默认预设
-    ├── data_pipeline/         # 数据治理门面
+    ├── data_pipeline/         # 数据处理门面
     │   ├── __init__.py        # run_pipeline(domain, file_paths, texts, …) → PipelineSummary
     │   ├── readers.py         # 输入归一化（Alpaca/ShareGPT/CSV/.txt）
     │   ├── cleaners.py        # 通用逐轮清洗 + 去重
@@ -95,7 +95,7 @@ llm-platform/
         └── tabs/              # ★ 接缝：每个工作台 Tab 一个模块（TITLE + build(domain)）
             ├── __init__.py    # TAB_REGISTRY
             ├── chat_tab.py    # 对话（真）
-            ├── data_tab.py    # 数据治理（真）
+            ├── data_tab.py    # 数据处理（真）
             └── train/weights/eval_tab.py  # 占位
 ```
 
@@ -116,7 +116,7 @@ llm-platform/
    ```
 
 ### 开发机模式（共用一个支持 `.venv-verify` 的轻量环境）
-- 纯 CPU 的数据治理管道**可本地验证**，不必挂卡/开云：
+- 纯 CPU 的数据处理管道**可本地验证**，不必挂卡/开云：
   ```bash
   cd D:\claude\llm-platform
   .venv-verify\Scripts\python -c "from llm_platform.data_pipeline import run_pipeline; ..."
@@ -150,9 +150,9 @@ QUANTIZATION = "none"                     # "none" | "8bit" | "4bit"（8bit/4bit
 FORCE_DEVICE = None                       # None=自动探测；"cuda"/"cpu" 强制（本地调试）
 ```
 
-## 数据治理用法
+## 数据处理用法
 
-进入「数据治理」Tab：
+进入「数据处理」Tab：
 1. 选领域（医疗/法律/金融/教育）。
 2. 数据源二选一：**上传文件**（.json/.jsonl/.csv/.txt）或 **粘贴纯文本**（每段以空行分隔，医疗/法律会自动生成问答对）。
 3. 设参数（最小/最大长度、去重、质量阈值）→ 点「运行治理」。
@@ -174,9 +174,9 @@ print(res.kept, res.drop_reasons, res.output_files)   # 落盘 data/医疗_alpac
 
 ## 常见问题
 
-- **`CUDA 不可用`**：在无 GPU 机器上跑。聊天/训练需 AutoDL GPU 实例；数据治理纯 CPU 无需。
+- **`CUDA 不可用`**：在无 GPU 机器上跑。聊天/训练需 AutoDL GPU 实例；数据处理纯 CPU 无需。
 - **聊天无卡也用不了**：应用在无卡时也能启动（预热失败被捕获），仅对话 Tab 需挂卡才可用。
-- **无卡能看到数据治理但点对话报错**：正常，属预期。
+- **无卡能看到数据处理但点对话报错**：正常，属预期。
 - **首次权重下载慢**：AutoDL 开「学术加速」。
 - **版本冲突**：AutoDL 镜像 torch 较旧时，去掉 `requirements.txt` 里 `transformers` 的版本号再 `pip install -U transformers gradio accelerate`。
 - **本地改代码要上云**：`./deploy.sh` 一键推码 + 重启；`./deploy.sh logs` 看日志。
@@ -186,7 +186,7 @@ print(res.kept, res.drop_reasons, res.output_files)   # 落盘 data/医疗_alpac
 | Sprint | 内容 | 状态 |
 |---|---|---|
 | 0 | 工作台 + Qwen 流式对话 | ✅ 完成 |
-| 1 | 数据治理 + 领域预设（医疗/法律深、金融/教育薄）+ 纯文本输入 | ✅ 完成 |
+| 1 | 数据处理 + 领域预设（医疗/法律深、金融/教育薄）+ 纯文本输入 | ✅ 完成 |
 | 3 | LoRA 微调 + 自动保存权重 | ⏳ 占位 |
 | 4 | 权重复用对话 + 多轮记忆加强 | ⏳ 占位 |
 | 5 | 多维度评测 + 跨领域对比 | ⏳ 占位 |

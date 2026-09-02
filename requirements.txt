@@ -15,5 +15,5 @@ safetensors==0.4.5
 
 # —— 后续 Sprint（本期不装）——
 # peft==0.13.2        # LoRA 微调
-# datasets==3.1.0     # 数据治理
+# datasets==3.1.0     # 数据处理
 # evaluate==0.4.3     # 多维度评测

@@ -1,4 +1,4 @@
-"""数据治理门面：run_pipeline(domain, file_paths, ...) -> PipelineSummary。
+"""数据处理门面：run_pipeline(domain, file_paths, ...) -> PipelineSummary。
 
 顺序：reader 归一化 -> 通用逐轮清洗 -> 领域预设级联 -> 合并判定(keep/drop+原因) -> 去重 -> 落盘。
 纯 CPU，不加载模型。

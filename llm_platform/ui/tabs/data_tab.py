@@ -1,4 +1,4 @@
-"""数据治理 Tab（Sprint 1）：上传语料 -> 领域清洗/质量过滤 -> ShareGPT 落盘 + 统计。
+"""数据处理 Tab（Sprint 1）：上传语料 -> 领域清洗/质量过滤 -> ShareGPT 落盘 + 统计。
 
 数据来源=仅用户上传（示例数据仅作开发/测试）。换领域用本 Tab 内的下拉（解决"构建时一次性"约束）。
 """
@@ -10,14 +10,14 @@ from llm_platform.data_pipeline import format_summary, run_pipeline
 from llm_platform.domain import labels, slug as label_to_slug
 from llm_platform.domain_presets import preset_options
 
-TITLE = "数据治理"
+TITLE = "数据处理"
 
 PREVIEW_HEADERS = ["id", "状态", "处置原因", "主要问题"]
 
 
 def build(domain: str):
     with gr.Column():
-        gr.Markdown("### 数据治理")
+        gr.Markdown("### 数据处理")
         with gr.Accordion("数据源（仅用户上传）", open=True):
             domain_dd = gr.Dropdown(choices=labels(), value=domain, label="领域（清洗预设按此切换）")
             opts = preset_options(label_to_slug(domain))

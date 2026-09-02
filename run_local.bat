@@ -1,6 +1,6 @@
 @echo off
 rem 本机（有 NVIDIA GPU + 已下模型）启动器：加载 Qwen2.5 + 4bit 量化 + 流式对话。
-rem 仅在带 GPU 的机器上运行；本机（无卡）仍用 .venv-verify 跑数据治理。
+rem 仅在带 GPU 的机器上运行；本机（无卡）仍用 .venv-verify 跑数据处理。
 setlocal
 set PYTHONIOENCODING=utf-8
 set PYTHONUTF8=1

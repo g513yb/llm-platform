@@ -6,7 +6,7 @@ from pathlib import Path
 
 # 项目根目录
 PROJECT_ROOT = Path(__file__).resolve().parent
-DATA_DIR = PROJECT_ROOT / "data"          # 数据治理产物：sharegpt.jsonl/.json + config.json
+DATA_DIR = PROJECT_ROOT / "data"          # 数据处理产物：sharegpt.jsonl/.json + config.json
 RESOURCE_DIR = PROJECT_ROOT / "resources" # 领域预设资源（知识即数据）
 
 # —— 基座模型 ——
