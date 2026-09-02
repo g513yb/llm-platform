@@ -40,7 +40,7 @@ def build(domain: str):
         preview = gr.Dataframe(headers=PREVIEW_HEADERS, label="样本明细（前 20 条）", interactive=False)
         out_path = gr.Textbox(label="输出文件（jsonl / json / config）", interactive=False,
                               lines=2, show_copy_button=True)
-        out_file = gr.File(label="下载 ShareGPT jsonl", interactive=True)
+        out_file = gr.File(label="下载 Alpaca jsonl（instruction/input/output）", interactive=True)
 
         def _refresh_presets(dom):
             o = preset_options(label_to_slug(dom))

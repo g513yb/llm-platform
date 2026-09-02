@@ -39,7 +39,7 @@
 - **清洗**：通用逐轮（编码/全半角/空白/去标签）+ 语料级去重（精确 sha1 + 近似 bigram Jaccard）
 - **领域预设**：阶段化引擎级联跑（见下节）
 - **质量过滤**：长度/重复/特殊字符/结构要素 + 领域质量分阈值 → 保留/丢弃（含原因直方图）
-- **落盘**：`data/<slug>_sharegpt.jsonl` + `.json` + `<slug>_config.json`（参数可复现）
+- **落盘**：`data/<slug>_alpaca.json`(+`.jsonl`)，统一为 Alpaca `{instruction,input,output}`（训练用；`OUTPUT_FORMAT` 可切回 `sharegpt`）+ `config.json`（参数可复现）
 - **统计**：总数/保留/丢弃 + 每阶段处置数 + 丢弃原因分布 + 前 20 条明细（UI 三表）
 
 ### 领域预设（引擎 + 资源 = 知识即数据）
@@ -82,7 +82,7 @@ llm-platform/
     │   ├── readers.py         # 输入归一化（Alpaca/ShareGPT/CSV/.txt）
     │   ├── cleaners.py        # 通用逐轮清洗 + 去重
     │   ├── txt_generator.py   # 纯文本 → 问答对（医疗/法律规则抽取）
-    │   └── io.py              # 落盘 sharegpt jsonl/json + config.json
+    │   └── io.py              # messages→Alpaca 落盘  jsonl/json + config.json
     ├── domain_presets/        # 阶段化领域预设引擎
     │   ├── engine.py          # Stage/WorkItem/Issue/DomainPreset/PipelineCtx/StageStats
     │   ├── resources.py       # ResourceBundle.load()（读 resources/、合并 shared、编译正则）
@@ -137,14 +137,14 @@ QUANTIZATION = "none"                     # "none" | "8bit"（需装 bitsandbyte
 1. 选领域（医疗/法律/金融/教育）。
 2. 数据源二选一：**上传文件**（.json/.jsonl/.csv/.txt）或 **粘贴纯文本**（每段以空行分隔，医疗/法律会自动生成问答对）。
 3. 设参数（最小/最大长度、去重、质量阈值）→ 点「运行治理」。
-4. 看三表：**统计**（总数/保留/丢弃 + 每阶段处置 + 丢弃原因分布）、**样本明细**、**输出路径**；可下载 `sharegpt.jsonl`。
+4. 看三表：**统计**（总数/保留/丢弃 + 每阶段处置 + 丢弃原因分布）、**样本明细**、**输出路径**；可下载 `alpaca.jsonl`（`{instruction,input,output}`）。
 
 命令行等价：
 ```python
 from llm_platform.data_pipeline import run_pipeline
 res = run_pipeline("医疗", file_paths=["病历.jsonl"], texts=["粘贴的纯文本…"],
                    min_len=10, max_len=2000, dedup=True, score_cutoff=0.4)
-print(res.kept, res.drop_reasons, res.output_files)   # 落盘 data/医疗_sharegpt.jsonl
+print(res.kept, res.drop_reasons, res.output_files)   # 落盘 data/医疗_alpaca.jsonl（{instruction,input,output}）
 ```
 
 ## 领域预设如何扩展

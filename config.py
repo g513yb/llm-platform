@@ -30,6 +30,7 @@ GENERATION = dict(
 # —— 应用 ——
 APP_TITLE = "多域 LLM 微调与评测平台"
 DEFAULT_DEVICE_MAP = "auto"
+OUTPUT_FORMAT = "alpaca"   # 训练数据输出格式："alpaca"(instruction/input/output, 默认) | "sharegpt"(messages)
 
 # —— 领域注册表：(标签, 描述) ——
 DOMAINS = [
