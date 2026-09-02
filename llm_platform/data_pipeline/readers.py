@@ -191,8 +191,9 @@ def _normalize(raw, base: str, rid: int) -> list:   # noqa: C901
             user = f"{user}\n\n{inp}"
         return [_mk(rid, base, [{"role": "user", "content": user},
                                 {"role": "assistant", "content": str(raw.get("输出", "")).strip()}])]
-    # ⑥ 通用问答兜底 (ask|question)+(answer|answers)
-    if ("ask" in raw or "question" in raw) and ("answer" in raw or "answers" in raw):
+    # ⑥ 通用问答兜底 (ask|question)+(answer|answers|response)
+    if ("ask" in raw or "question" in raw) and (
+            "answer" in raw or "answers" in raw or "response" in raw):
         return [_generic_qa_to_item(raw, base, rid)]
 
     raise ValueError(f"{base}#{rid}: 无法识别结构（需 Alpaca/ShareGPT/CMB/Toyhom）")
@@ -205,7 +206,8 @@ def _mk(rid: int, base: str, msgs) -> WorkItem:
 
 
 def _is_exam(raw: dict) -> bool:
-    return ("question" in raw) and ("question_type" in raw or bool(raw.get("option")))
+    return ("question" in raw) and ("question_type" in raw or "option" in raw
+                                    or "options" in raw or "answer_idx" in raw)
 
 
 def _exam_to_item(raw, base, rid) -> WorkItem:
@@ -213,22 +215,37 @@ def _exam_to_item(raw, base, rid) -> WorkItem:
     label = _EXAM_TYPE_LABEL.get(qt, qt or "题")
     header = "；".join(str(x) for x in [raw.get("exam_type"), raw.get("exam_class"),
                                         raw.get("exam_subject")] if x and str(x).strip())
+    # MedQA meta_info 可选增强（src/subjects/group）
+    mi = raw.get("meta_info")
+    if isinstance(mi, dict):
+        for k in ("src", "subjects", "group"):
+            v = mi.get(k)
+            if v:
+                v = "、".join(v) if isinstance(v, (list, tuple)) else str(v)
+                header = f"{header}；{k}:{v}" if header else f"{k}:{v}"
     user = f"[{header}] " if header else ""
     user += f"{label}：{str(raw.get('question', '')).strip()}"
-    opts = _format_options(raw.get("option"))
+    opts = _format_options(raw.get("option") or raw.get("options"))
     if opts:
         user += "\n" + opts
-    ans = _norm_answer(raw.get("answer"))
-    asst = f"答案：{ans}" if ans else "答案：见解析"
-    for k in ("explanation", "solution", "解析"):
-        if raw.get(k):
-            asst += f"\n解析：{str(raw[k]).strip()}"
-            break
+    answer_idx = raw.get("answer_idx")
+    letter = str(answer_idx).strip().upper() if answer_idx else _norm_answer(raw.get("answer"))
+    asst = f"答案：{letter}" if letter else "答案：见解析"
+    # MedQA：answer 是长解析文本；仅当用 answer_idx 且 answer 非单字母时追加解析
+    if answer_idx:
+        exp = str(raw.get("answer") or "").strip()
+        if exp and not re.fullmatch(r"[A-Za-z]+", exp):
+            asst += f"\n解析：{exp}"
+    else:
+        for k in ("explanation", "solution", "解析"):
+            if raw.get(k):
+                asst += f"\n解析：{str(raw[k]).strip()}"
+                break
     return WorkItem(rid, f"{base}#{rid}",
                     [{"role": "user", "content": user}, {"role": "assistant", "content": asst}],
                     meta={"format": "cmb_exam", "question_type": qt,
-                          "answer_raw": raw.get("answer"), "exam_type": raw.get("exam_type"),
-                          "exam_subject": raw.get("exam_subject")})
+                          "answer_raw": raw.get("answer"), "answer_idx": answer_idx,
+                          "exam_type": raw.get("exam_type"), "exam_subject": raw.get("exam_subject")})
 
 
 def _format_options(option) -> str:
@@ -278,7 +295,7 @@ def _clin_to_items(raw, base, rid) -> list:
 
 def _generic_qa_to_item(raw, base, rid) -> WorkItem:
     q = str(raw.get("ask") or raw.get("question") or "").strip()
-    a = raw.get("answer") or raw.get("answers")
+    a = raw.get("response") or raw.get("answer") or raw.get("answers")
     if isinstance(a, list):
         a = a[0] if a else ""
     a = str(a or "").strip()
