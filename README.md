@@ -32,6 +32,7 @@
   - ShareGPT：`{"messages":[{role,content}...]}`
   - CSV：`instruction/input/output` 列，或 `id/role/content` 长表、`ask/question+answer` 问答列；编码 `utf-8-sig → gbk → utf-8` 自动回退
   - **医疗数据集**：CMB-Exam(`question_type/option/answer`)、CMB-Clin(`QA_pairs`，一条→多条)、Toyhom(`department/title/ask/answer`)、MedQA(`options/answer_idx`)、Huatuo-26M(`question/response`)
+  - **法律数据集**：DISC-Law-SFT(Alpaca)、LawBench(问答/摘要，法条检索/判决预测留评测)、Chinese-Law-Doc(raw 文书→法规抽条/判决书要点/合同要点)
   - **纯文本**：医疗/法律经 `txt_generator` **领域规则抽取** 自动合成 ShareGPT 问答对（见下）；其余领域纯文本暂不支持
 - **清洗**：通用逐轮（编码/全半角/空白/去标签）+ 语料级去重（精确 sha1 + 近似 bigram Jaccard）
 - **领域预设**：阶段化引擎级联跑（见下节）
@@ -46,7 +47,7 @@
 - **通用阶段**（`stages_generic`）：deid / section / terminology / units / completeness_qc / quality_score / marker_norm / numeric。
 - **法律专属阶段**（`stages_legal`）：`DocTypeStage`（文书类型识别）+ `LegalStructureStage`（文号规范化 + 编章节条款项层级树 + 分部）。
 - **医疗（深度）**：小节识别（主诉/现病史/过敏史/手术史/生命体征…，保序）、分层脱敏（姓名/复姓/身份证/手机/医保卡/就诊卡/机构，防误判）、术语接线（preserve + qd/bid→每日N次）、单位+化验值区间、跨小节一致性质检（诊断未在现病史 → warning）。医疗有**两个预设**：`medical_cn`（临床病历，严格，要求主诉/诊断）与 `medical_qa`（考试/问答，宽松，仅脱敏/术语/单位+质量分，用于 CMB/Toyhom）。
-- **法律（深度）**：当事人脱敏（保留案号/文号/日期/法院名绝不脱敏）、文书分部、编章条层级、`doc_type_checks` 文档类型感知质控（判决书缺要素 → drop；中文日期也匹配）。
+- **法律（深度）**：当事人脱敏（保留案号/文号/日期/法院名绝不脱敏）、文书分部、编章条层级、`doc_type_checks` 文档类型感知质控（判决书缺要素 → drop；中文日期也匹配）。法律有两个预设：`legal_cn`（文书，严格）与 `legal_qa`（问答/指令，宽松，用于 DISC-Law-SFT/LawBench 等）。
 - **金融 / 教育**：同引擎 + 薄资源表（数值单位规范化 / 选项答案规范化）。
 
 **扩展一个新领域**：在 `resources/<slug>/` 下建 `preset.json`（stage 顺序）+ 各类资源表即可，其余不动。

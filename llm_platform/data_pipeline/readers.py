@@ -195,8 +195,16 @@ def _normalize(raw, base: str, rid: int) -> list:   # noqa: C901
     if ("ask" in raw or "question" in raw) and (
             "answer" in raw or "answers" in raw or "response" in raw):
         return [_generic_qa_to_item(raw, base, rid)]
+    # ⑦ 法条/条文摘要: article -> summary/output
+    if ("article" in raw or "law_article" in raw) and ("summary" in raw or "output" in raw):
+        q = str(raw.get("article") or raw.get("law_article") or "").strip()
+        s = raw.get("summary") or raw.get("output")
+        s = str(s or "").strip()
+        if q and s:
+            return [_mk(rid, base, [{"role": "user", "content": q},
+                                    {"role": "assistant", "content": s}])]
 
-    raise ValueError(f"{base}#{rid}: 无法识别结构（需 Alpaca/ShareGPT/CMB/Toyhom）")
+    raise ValueError(f"{base}#{rid}: 无法识别结构（需 Alpaca/ShareGPT/CMB/Toyhom/LawBench）")
 
 
 def _mk(rid: int, base: str, msgs) -> WorkItem:

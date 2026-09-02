@@ -403,7 +403,16 @@ class QualityScoreStage(Stage):
             struct = item.meta.get("structure_score", 0) / total_w
             completeness = 0.0 if item.meta.get("missing_required") else 1.0
         else:
-            keys = list(qc.get("checks", {}))
+            # 优先采用 doc_type_checks（法律）里对应文书的 checks，否则回退顶层 checks（金融/教育）
+            dtc = qc.get("doc_type_checks")
+            checks = {}
+            if dtc and isinstance(dtc, dict):
+                dt = item.meta.get("doc_type") or qc.get("default_type", "其他")
+                cfg = dtc.get(dt, dtc.get(qc.get("default_type", "其他"), {}))
+                checks = cfg.get("checks", {})
+            if not checks:
+                checks = qc.get("checks", {})
+            keys = list(checks)
             ok = sum(1 for k in keys if item.meta.get(f"qc_ok_{k}"))
             struct = ok / max(1, len(keys))
             completeness = 1.0 if struct > 0 else 0.0
