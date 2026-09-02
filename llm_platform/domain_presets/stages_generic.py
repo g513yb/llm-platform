@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import re
-from typing import Optional
 
 from .engine import Issue, Stage, WorkItem
 
@@ -101,12 +100,15 @@ class DeidStage(Stage):
         skip_bracket = bool(guard.get("skip_inside_brackets", True))
         compounds = g.get("compound_surnames", []) or []
         compound_alt = "|".join(re.escape(c) for c in compounds) if compounds else "(?!)"
-        try:
-            # 复姓(2字) 优先，其次单姓；允许中文前置（患者/病人/男等）
-            name_re = re.compile(
-                rf"(?<![A-Za-z0-9])((?:{compound_alt})|[{sur}])([一-龥]{{{lo},{hi}}})(?=$|[\s，。；：、,.!?！？])")
-        except re.error:
-            return text, issues
+        name_re = g.get("_name_re")
+        if name_re is None:
+            try:
+                # 复姓(2字) 优先，其次单姓；允许中文前置（患者/病人/男等）
+                name_re = re.compile(
+                    rf"(?<![A-Za-z0-9])((?:{compound_alt})|[{sur}])([一-龥]{{{lo},{hi}}})(?=$|[\s，。；：、,.!?！？])")
+            except re.error:
+                return text, issues
+            g["_name_re"] = name_re
         edits = []
         for m in name_re.finditer(text):
             word = m.group(0)

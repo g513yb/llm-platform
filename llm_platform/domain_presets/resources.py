@@ -172,9 +172,6 @@ class ResourceBundle:
     def ends_with_whitelisted_suffix(self, word: str) -> bool:
         return any(word.endswith(x) for x in self._suffix_end)
 
-    def preserve(self, word: str) -> bool:
-        return word in self._preserve
-
     def guard(self) -> dict:
         return self._guard
 

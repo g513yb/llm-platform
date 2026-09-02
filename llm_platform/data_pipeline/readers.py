@@ -68,21 +68,21 @@ def _read_file(path: str, ext: str, read_txt_raw: Optional[Callable]) -> list:
     if ext == ".csv":
         return _read_csv(path)
     if ext == ".txt":
-        lines = [l for l in Path(path).read_text(encoding="utf-8-sig").splitlines() if l.strip()]
-        if lines and all(_is_jsonl_line(l) for l in lines):
-            return [json.loads(l) for l in lines]
+        text = Path(path).read_text(encoding="utf-8-sig")
+        lines = [l for l in text.splitlines() if l.strip()]
+        parsed = []
+        for l in lines:
+            try:
+                parsed.append(json.loads(l))
+            except Exception:
+                parsed = None
+                break
+        if parsed:
+            return parsed
         if read_txt_raw:
-            return read_txt_raw(Path(path).read_text(encoding="utf-8-sig"))
+            return read_txt_raw(text)
         raise ValueError(P2_TXT_MSG)
     raise ValueError(f"不支持的文件类型：{ext}（支持 .json/.jsonl/.csv/.txt）")
-
-
-def _is_jsonl_line(line: str) -> bool:
-    try:
-        json.loads(line)
-        return True
-    except Exception:
-        return False
 
 
 def _read_csv(path: str) -> list:
@@ -128,7 +128,7 @@ def _csv_long_to_messages(df, cols):
 
 
 def _csv_qa_to_sharegpt(df, cols):
-    qcol = cols.get("ask") or cols.get("question") or cols.get("answers")
+    qcol = cols.get("ask") or cols.get("question")
     acol = cols.get("answer") or cols.get("answers")
     dcol, tcol = cols.get("department"), cols.get("title")
     out = []
@@ -220,22 +220,13 @@ def _normalize(raw, base: str, rid: int) -> list:   # noqa: C901
             "answer" in raw or "answers" in raw or "response" in raw):
         return [_generic_qa_to_item(raw, base, rid)]
     # ⑦ 法条/条文摘要: article -> summary/output
-    if ("article" in raw or "law_article" in raw) and ("summary" in raw or "output" in raw):
+    if ("article" in raw or "law_article" in raw) and "summary" in raw:
         q = str(raw.get("article") or raw.get("law_article") or "").strip()
         s = raw.get("summary") or raw.get("output")
         s = str(s or "").strip()
         if q and s:
             return [_mk(rid, base, [{"role": "user", "content": q},
                                     {"role": "assistant", "content": s}])]
-    # ⑧ input+output（无 instruction/question/answer）-> 问答对（如 fingpt-sentiment-train: 文本→标签）
-    if ("input" in raw and "output" in raw and "instruction" not in raw
-            and "question" not in raw and "answer" not in raw):
-        u = str(raw.get("input", "")).strip()
-        o = str(raw.get("output", "")).strip()
-        if u and o:
-            return [_mk(rid, base, [{"role": "user", "content": u},
-                                    {"role": "assistant", "content": o}])]
-
     raise ValueError(f"{base}#{rid}: 无法识别结构（需 Alpaca/ShareGPT/CMB/Toyhom/LawBench/FinEval/fingpt）")
 
 

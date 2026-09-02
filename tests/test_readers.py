@@ -89,7 +89,7 @@ class TestReaders(unittest.TestCase):
         self._assert_pair(reader("fineval_qa_finance.jsonl"), asst_marker="党参")
 
     def test_fingpt_input_output(self):
-        # branch ⑧：只有 input+output（无 instruction/question/answer）
+        # {input, output} 走 Alpaca 分支④（无 instruction 时 user=input；generic_clean 归一掉 \n\n 前缀）
         self._assert_pair(reader("fingpt_finance.jsonl"),
                           user_marker="公司发布业绩预告", asst_start="positive")
 

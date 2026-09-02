@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 
 @dataclass
@@ -22,10 +22,6 @@ class Issue:
     start: Optional[int] = None
     end: Optional[int] = None
     detail: Optional[dict] = None
-
-    def as_dict(self) -> dict:
-        return {"stage": self.stage, "code": self.code, "level": self.level,
-                "message": self.message, "detail": self.detail or {}}
 
 
 @dataclass
@@ -93,11 +89,6 @@ class DomainPreset:
         from . import make_stage           # 避免循环导入
         stages = [make_stage(s["kind"], s.get("params", {})) for s in cfg.get("stages", [])]
         return cls(name=cfg.get("name", "generic"), description=cfg.get("description", ""), stages=stages)
-
-    @classmethod
-    def from_json(cls, path, ctx: PipelineCtx) -> "DomainPreset":
-        import json
-        return cls.from_dict(json.loads(open(path, encoding="utf-8").read()), ctx)
 
     def run(self, item: WorkItem, ctx: PipelineCtx) -> WorkItem:
         for stage in self.stages:

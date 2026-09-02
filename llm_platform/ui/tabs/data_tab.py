@@ -34,7 +34,7 @@ def build(domain: str):
                 max_len = gr.Number(value=2000, label="最大字符数", precision=0)
                 score_cutoff = gr.Slider(0.0, 1.0, value=0.40, step=0.05, label="质量过滤阈值")
             dedup = gr.Checkbox(value=True, label="启用去重（精确 + 近似）")
-            run_btn = gr.Button("运行治理", variant="primary")
+            run_btn = gr.Button("运行处理", variant="primary")
 
         stats = gr.Markdown("")
         preview = gr.Dataframe(headers=PREVIEW_HEADERS, label="样本明细（前 20 条）", interactive=False)

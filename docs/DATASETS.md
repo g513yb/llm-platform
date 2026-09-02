@@ -14,7 +14,7 @@ llm-platform 的「数据处理」可直接读取阿里/清华等来源的**医�
   # 把 huatuo.jsonl 上传到「数据处理」即可
   ```
 - **GitHub 仓库**：`git clone <url>` 后，直接上传仓库里的 `.jsonl`/`.csv`；raw 文书 `.txt` 也支持（法律走规则抽取合成问答对）。
-- 上传后在「数据处理」Tab：选领域（医疗/法律/金融）→ 选**预设** → 选文件 → 运行治理 → 落盘 **Alpaca `{instruction,input,output}`**（训练用；`config.OUTPUT_FORMAT` 可切回 `sharegpt`）。
+- 上传后在「数据处理」Tab：选领域（医疗/法律/金融）→ 选**预设** → 选文件 → 运行处理 → 落盘 **Alpaca `{instruction,input,output}`**（训练用；`config.OUTPUT_FORMAT` 可切回 `sharegpt`）。
 
 ---
 
