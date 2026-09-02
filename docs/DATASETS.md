@@ -97,6 +97,31 @@ llm-platform 的「数据治理」可直接读取阿里/清华等来源的**医�
 ### BloombergGPT
 - 说明：**无官方公开数据集**（模型与 FinPile 未开源，仅论文 [arXiv:2303.17564](https://arxiv.org/abs/2303.17564)）。本平台不提供摄入入口；如需金融语料请使用上面的 FinEval / fingpt。
 
+---
+
+## 教育
+
+### MMLU（hendrycks/test，即 MMLU）
+- 仓库：https://github.com/hendrycks/test
+- 性质：通用多选题基准（57 科目），CSV `question,A,B,C,D,answer`（答案=字母）。
+- 获取：`git clone # https://github.com/hendrycks/test` → `data/{dev,val,test}/*.csv`。
+- 字段：`question / A..D / answer(字母)`。
+- 预设：**education_cn**（选择题；读入时自动把选项拼进 user，答案`答案：X`）。
+
+### CMMLU
+- 仓库：https://github.com/haonan-li/CMMLU
+- 性质：中文多选题基准（约 67 科目），CSV `Question,A,B,C,D,Answer`（大写 + 前导序号列，答案=字母）。
+- 获取：`git clone https://github.com/haonan-li/CMMLU` → `data/{dev,test}/*.csv`。
+- 字段：`Question / A..D / Answer(字母)`。
+- 预设：**education_cn**（选择题）。
+
+### EduChat
+- 仓库：**https://github.com/ECNU-ICALK/EduChat**（华东师大 ICALK 教育对话大模型；原给出的 `iecsql/EduChat` 已 404，早期为 `icalk-nlp/EduChat`）。
+- 性质：中文教育对话/指令数据（出题、批改、心理疏导、辅导、高考咨询等，多为 Alpaca `instruction/input/output`）。
+- 获取：见仓库；其教育 SFT 多为指令/问答对（语料量大，仓库以样例/外部为准）。
+- 字段：`instruction / input / output`（Alpaca）。
+- 预设：**education_qa**（宽松）——非选择题的自由问答在 `education_cn`（"选项+答案"校验）下会被丢弃，故用宽松。
+
 ## 预设选择对照
 
 | 数据 | 领域 | 推荐预设 |
@@ -108,8 +133,10 @@ llm-platform 的「数据治理」可直接读取阿里/清华等来源的**医�
 | Chinese-Law-Doc（raw 文书）| 法律 | legal_cn（合成后）|
 | FinEval / fingpt-sentiment / 金融问答 | 金融 | finance_qa |
 | 金融数值研报（含 % / 亿元）| 金融 | finance_cn |
+| MMLU / CMMLU（多选题）| 教育 | education_cn |
+| EduChat / 教育问答 | 教育 | education_qa |
 
-> 医疗/法律/金融各有两个预设：`medical_cn`/`medical_qa`、`legal_cn`/`legal_qa`、`finance_cn`/`finance_qa`；前者严格（要求结构/文书/数值指标），后者宽松（仅脱敏/术语/质量分），考试问答类选宽松，病历/文书/数值类选严格。
+> 医疗/法律/金融/教育各有两个预设：`medical_cn`/`medical_qa`、`legal_cn`/`legal_qa`、`finance_cn`/`finance_qa`、`education_cn`/`education_qa`；前者严格（要求结构/文书/数值指标/选项答案），后者宽松（仅清洗/术语/质量分），考试问答类选宽松，病历/文书/数值/选择类选严格。
 
 ## ⚠️ 注意（账号/地址可能变动）
 - **LawBench**（`github.com/CSH-LawBench/LawBench`）与 **Chinese-Law-Doc**（`github.com/liuhuanyong/Chinese-Law-Doc`）在本文核对时**返回 404**（可能已迁移/改名/私有化；同是 GitHub 的 MedQA 却可达，故非网络代理问题）。使用前请到对应平台搜索最新仓库；本表中的字段为本平台按已知格式识别（FAQ 问答/摘要），若仓库地址有变以上表链接站点为准。

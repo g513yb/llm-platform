@@ -104,6 +104,9 @@ def _read_csv(path: str) -> list:
     # Alpaca 或中文列名
     if {"instruction", "output"} <= set(cols) or {"指令", "输出"} <= set(cols):
         return list(df.to_dict("records"))
+    # 多选题 CSV（MMLU/CMMLU 风格）：question + A..D 选项列 + answer(字母) —— 须先于通用问答列，避免丢选项
+    if ({"question", "answer"} <= set(cols) and {"a", "b", "c", "d"} <= set(cols)):
+        return _csv_mcq_to_sharegpt(df, cols)
     # 问答列（Toyhom: department/title/ask/answer 或 question/answer 等）
     if ({"ask", "answer"} <= set(cols) or {"question", "answer"} <= set(cols)
             or {"ask", "answers"} <= set(cols) or {"question", "answers"} <= set(cols)):
@@ -143,6 +146,27 @@ def _csv_qa_to_sharegpt(df, cols):
         out.append({"messages": [{"role": "user", "content": user},
                                  {"role": "assistant", "content": a}],
                     "_meta": {"format": "toyhom", "department": d, "title": t}})
+    return out
+
+
+def _csv_mcq_to_sharegpt(df, cols):
+    qcol = cols.get("question")
+    acol = cols.get("answer")
+    letters = [L for L in "ABCDEF" if (L.lower() in cols)]
+    out = []
+    for _, row in df.iterrows():
+        q = _cell(row, qcol)
+        if not q:
+            continue
+        opts = "\n".join(f"{L}. {v}" for L in letters
+                         if (v := _cell(row, cols[L.lower()])))
+        user = q + (("\n" + opts) if opts else "")
+        a = _cell(row, acol)
+        ans = str(a or "").strip().upper()
+        assistant = f"答案：{ans}" if ans else "答案：见解析"
+        out.append({"messages": [{"role": "user", "content": user},
+                                 {"role": "assistant", "content": assistant}],
+                    "_meta": {"format": "mcq_csv"}})
     return out
 
 
