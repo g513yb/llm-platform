@@ -1,0 +1,12 @@
+{
+  "name": "medical_cn",
+  "description": "中文临床病历清洗与质量过滤（深度预设）",
+  "stages": [
+    {"kind":"deid"},
+    {"kind":"section"},
+    {"kind":"terminology"},
+    {"kind":"units"},
+    {"kind":"completeness_qc"},
+    {"kind":"quality_score"}
+  ]
+}

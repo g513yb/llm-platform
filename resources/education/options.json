@@ -1,0 +1,11 @@
+{
+  "normalize": [
+    {"pattern":"(?m)^\\s*([A-D])\\s*[、.．)）】]\\s*","replacement":"\\1. "},
+    {"pattern":"答案[：:]\\s*([A-D])","replacement":"答案：\\1"},
+    {"pattern":"参考答案\\s*([A-D])","replacement":"答案：\\1"},
+    {"pattern":"正确选项(?:是)?\\s*[：:]?\\s*([A-D])","replacement":"答案：\\1"},
+    {"pattern":"题干[：:]","replacement":"题目："},
+    {"pattern":"例题[：:]","replacement":"题目："}
+  ],
+  "option_range": "ABCDEF"
+}

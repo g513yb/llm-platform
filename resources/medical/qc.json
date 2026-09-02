@@ -1,0 +1,17 @@
+{
+  "mode": "sections",
+  "required_sections": {"user":["主诉","诊断"],"assistant":[]},
+  "score_weights": {"主诉":2,"现病史":2,"既往史":1,"过敏史":1,"手术史":1,"体格检查":2,"辅助检查":2,"诊断":3,"治疗":1,"医嘱":1},
+  "min_structure_score": 4,
+  "assistant_refs_sections": true,
+  "drop_reason": {"missing_required":"临床信息不完整","low_score":"结构质量分过低"},
+  "consistency": {
+    "diagnosis_in_hpi": {
+      "set":["诊断","现病史"],
+      "label":"诊断疾病未出现在现病史",
+      "disease_keywords":["高血压","糖尿病","冠心病","急性心肌梗死","心梗","脑梗死","脑出血","肺炎","阑尾炎","胆结石","肾结石","胃癌","肺癌","肝硬化"]
+    },
+    "zhusu_require": {"section":"主诉","min_len":4,"label":"主诉缺少时长或主要症状"},
+    "section_min_len": {"min_len":2,"label":"必需小节内容过短"}
+  }
+}

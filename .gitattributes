@@ -1,0 +1,9 @@
+# 统一行尾：代码/脚本/文本用 LF，跨平台协同不产生噪音
+* text=auto
+*.py  text eol=lf
+*.sh  text eol=lf
+*.md  text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.bat text eol=crlf

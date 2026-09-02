@@ -1,0 +1,20 @@
+{
+  "kept_patterns": [
+    "法释〔20\\d{2}〕\\d+号","国发〔20\\d{2}〕\\d+号","司发〔20\\d{2}〕\\d+号",
+    "〔20\\d{2}〕\\d+号","\\d{4}[年.\\-]\\d{1,2}[月.\\-]\\d{1,2}日?","二〇\\d{2}年\\d{1,2}月\\d{1,2}日",
+    "[（(]20\\d{2}[）)]最高法[^，。\\s]{0,14}?\\d+号","[（(]20\\d{2}[）)]?[^，。\\s]{0,16}?\\d+号","人民法院","民初","刑初","民终","刑终"
+  ],
+  "pattern_groups": [
+    {"id":"id_card","pattern":"(?<!\\d)\\d{17}[\\dXx](?!\\d)","replacement":"[身份证号]","level":"cleaned","min_confidence":0.9},
+    {"id":"phone","pattern":"(?<!\\d)1[3-9]\\d{9}(?!\\d)","replacement":"[手机号]","level":"cleaned","min_confidence":0.9},
+    {"id":"email","pattern":"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}","replacement":"[邮箱]","level":"cleaned","min_confidence":0.9},
+    {"id":"party_name","context_anchor":["原告","被告","上诉人","被上诉人","申请人","被申请人","委托诉讼代理人","辩护人","第三人"],
+     "pattern":"([\\u4e00-\\u9fa5]{2,3})","replacement":"[当事人]","level":"annotated","min_confidence":0.7,
+     "exclude":["诉称","辩称","认为","依法","请求","应当","起诉","上诉","申请","某","在","于","系","称","主张","到庭","应诉","某某"]},
+    {"id":"address","context_anchor":["住址","地址","住所地","居住地","住所"],
+     "pattern":"[\\u4e00-\\u9fa5]{1,15}[0-9]{1,6}[号室栋]?[\\u4e00-\\u9fa50-9A-Za-z]{0,8}","replacement":"[住址]","level":"annotated","min_confidence":0.6}
+  ],
+  "whitelist": ["人民法院","审判长","审判员","人民陪审员","法官","律师事务所","主任"],
+  "suffix_whitelist_endings": [],
+  "overmatch_guard": {"name_context_window":6,"max_examine_per_turn":40,"skip_inside_brackets":true,"anchor_required_for_cleaned":false}
+}

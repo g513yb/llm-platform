@@ -1,0 +1,10 @@
+{
+  "mode": "regex",
+  "checks": {
+    "has_metric": {"regex":"\\d+(?:\\.\\d+)?%|\\d[\\d,]*(?:\\.\\d+)?[万亿]元|\\d+(?:\\.\\d+)?[%％]","label":"数值指标"},
+    "has_unit": {"regex":"%|元|万元|亿元|倍|%点|bp|‰","label":"数值单位"}
+  },
+  "require_all": ["has_metric","has_unit"],
+  "min_structure_score": 1,
+  "drop_reason": {"missing":"缺少带单位的数值指标","low_score":"数值质量分过低"}
+}

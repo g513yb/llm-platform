@@ -1,0 +1,26 @@
+{
+  "order_index": ["患者基本信息","主诉","现病史","既往史","个人史","月经婚育史","家族史","过敏史","手术史","输血史","用药史","生命体征","体格检查","辅助检查","诊断","治疗","护理记录","会诊记录","出院小结","随访"],
+  "canonical": [
+    {"name":"患者基本信息","aliases":["患者基本信息","基本信息","患者信息"]},
+    {"name":"主诉","aliases":["主诉","chief complaint","cc"]},
+    {"name":"现病史","aliases":["现病史","病程描述","history of present illness","hpi"]},
+    {"name":"既往史","aliases":["既往史","past medical history","pmh"]},
+    {"name":"个人史","aliases":["个人史","personal history"]},
+    {"name":"月经婚育史","aliases":["月经婚育史","月经史","婚育史"]},
+    {"name":"家族史","aliases":["家族史","family history","fh"]},
+    {"name":"过敏史","aliases":["过敏史","药物过敏史","allergy history"]},
+    {"name":"手术史","aliases":["手术史","手术外伤史","operative history"]},
+    {"name":"输血史","aliases":["输血史","transfusion history"]},
+    {"name":"用药史","aliases":["用药史","药物史","medication history"]},
+    {"name":"生命体征","aliases":["生命体征","vital signs","体温","脉搏","呼吸","血压"]},
+    {"name":"体格检查","aliases":["体格检查","查体","体检","physical exam"]},
+    {"name":"辅助检查","aliases":["辅助检查","辅助检查结果","实验室检查","lab exam"]},
+    {"name":"诊断","aliases":["诊断","初步诊断","诊断意见","出院诊断","impression"]},
+    {"name":"治疗","aliases":["治疗","治疗方案","处方","治疗意见"]},
+    {"name":"护理记录","aliases":["护理记录","护理","nursing record"]},
+    {"name":"会诊记录","aliases":["会诊记录","会诊","consultation"]},
+    {"name":"出院小结","aliases":["出院小结","出院记录","discharge summary"]},
+    {"name":"随访","aliases":["随访","随访记录","follow-up"]},
+    {"name":"医嘱","aliases":["医嘱","长期医嘱","临时医嘱"]}
+  ]
+}
