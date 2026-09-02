@@ -321,7 +321,8 @@ def _clin_to_items(raw, base, rid) -> list:
         if not isinstance(qp, dict):
             continue
         q = str(qp.get("question", "")).strip()
-        s = str(qp.get("solution", "")).strip()
+        # 兼容真实 CMB-Clin：QA 对用 answer 而非 solution（复数键兼容）
+        s = str(qp.get("solution") or qp.get("answer") or "").strip()
         if not q or not s:
             continue
         user = "\n".join(x for x in (title, desc, q) if x)
