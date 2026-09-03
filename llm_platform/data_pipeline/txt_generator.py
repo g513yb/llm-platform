@@ -42,7 +42,9 @@ def _gen_medical(text: str) -> list[dict]:
             f"治疗：{g('治疗')}" if g('治疗') else "",
         ] if part)
         return [{"messages": [{"role": "user", "content": text},
-                              {"role": "assistant", "content": answer}]}]
+                              {"role": "assistant", "content": answer}],
+                 "_meta": {"alpaca_instruction": "从以下病历中提取结构化信息。",
+                           "alpaca_input": text, "alpaca_output": answer}}]
     return []
 
 
@@ -65,7 +67,9 @@ def _gen_legal(text: str) -> list[dict]:
     if not answer:
         return []
     return [{"messages": [{"role": "user", "content": text},
-                          {"role": "assistant", "content": answer}]}]
+                          {"role": "assistant", "content": answer}],
+             "_meta": {"alpaca_instruction": "从以下法律文书中提取关键信息。",
+                       "alpaca_input": text, "alpaca_output": answer}}]
 
 
 def _first_match(text: str, pattern: str) -> str:

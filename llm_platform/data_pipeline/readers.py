@@ -192,7 +192,7 @@ def _normalize(raw, base: str, rid: int) -> list:   # noqa: C901
 
     # ① ShareGPT 优先（保护带额外键的混合记录）
     if isinstance(raw.get("messages"), list):
-        return [_mk(rid, base, raw["messages"])]
+        return [_mk(rid, base, raw["messages"], meta=raw.get("_meta") or {})]
     # ② CMB-Clin：QA_pairs -> 一条记录转 N 条
     if isinstance(raw.get("QA_pairs"), list):
         return _clin_to_items(raw, base, rid)
@@ -201,20 +201,26 @@ def _normalize(raw, base: str, rid: int) -> list:   # noqa: C901
         return [_exam_to_item(raw, base, rid)]
     # ④ Alpaca
     if "instruction" in raw or "output" in raw:
-        user = str(raw.get("instruction", "")).strip()
+        instr = str(raw.get("instruction", "")).strip()
         inp = str(raw.get("input") or "").strip()
-        if inp:
-            user = f"{user}\n\n{inp}"
+        user = f"{instr}\n\n{inp}" if inp else instr
+        out = str(raw.get("output", "")).strip()
+        meta = {"format": "alpaca"}
+        if instr:  # 有显式指令才保留拆分；无指令（如 fingpt {input,output}）回退默认
+            meta.update({"alpaca_instruction": instr, "alpaca_input": inp, "alpaca_output": out})
         return [_mk(rid, base, [{"role": "user", "content": user},
-                                {"role": "assistant", "content": str(raw.get("output", "")).strip()}])]
+                                {"role": "assistant", "content": out}], meta=meta)]
     # ⑤ 中文 Alpaca
     if "指令" in raw or "输出" in raw:
-        user = str(raw.get("指令", "")).strip()
+        instr = str(raw.get("指令", "")).strip()
         inp = str(raw.get("输入") or "").strip()
-        if inp:
-            user = f"{user}\n\n{inp}"
+        user = f"{instr}\n\n{inp}" if inp else instr
+        out = str(raw.get("输出", "")).strip()
+        meta = {"format": "alpaca_cn"}
+        if instr:
+            meta.update({"alpaca_instruction": instr, "alpaca_input": inp, "alpaca_output": out})
         return [_mk(rid, base, [{"role": "user", "content": user},
-                                {"role": "assistant", "content": str(raw.get("输出", "")).strip()}])]
+                                {"role": "assistant", "content": out}], meta=meta)]
     # ⑥ 通用问答兜底 (ask|question)+(answer|answers|response)
     if ("ask" in raw or "question" in raw) and (
             "answer" in raw or "answers" in raw or "response" in raw):
@@ -226,14 +232,17 @@ def _normalize(raw, base: str, rid: int) -> list:   # noqa: C901
         s = str(s or "").strip()
         if q and s:
             return [_mk(rid, base, [{"role": "user", "content": q},
-                                    {"role": "assistant", "content": s}])]
+                                    {"role": "assistant", "content": s}],
+                        meta={"format": "law_summary",
+                              "alpaca_instruction": "概括以下法条/条文的核心要义。",
+                              "alpaca_input": q, "alpaca_output": s})]
     raise ValueError(f"{base}#{rid}: 无法识别结构（需 Alpaca/ShareGPT/CMB/Toyhom/LawBench/FinEval/fingpt）")
 
 
-def _mk(rid: int, base: str, msgs) -> WorkItem:
+def _mk(rid: int, base: str, msgs, meta: dict | None = None) -> WorkItem:
     clean = [{"role": m.get("role"), "content": str(m.get("content", "")).strip()}
              for m in msgs if isinstance(m, dict) and m.get("role") in ("user", "assistant")]
-    return WorkItem(rid, f"{base}#{rid}", clean)
+    return WorkItem(rid, f"{base}#{rid}", clean, meta=meta or {})
 
 
 def _is_exam(raw: dict) -> bool:
@@ -307,6 +316,7 @@ def _norm_answer(a) -> str:
 def _clin_to_items(raw, base, rid) -> list:
     title = str(raw.get("title", "")).strip()
     desc = str(raw.get("description", "")).strip()
+    ctx_text = "\n".join(x for x in (title, desc) if x)
     out = []
     for i, qp in enumerate(raw["QA_pairs"]):
         if not isinstance(qp, dict):
@@ -319,7 +329,8 @@ def _clin_to_items(raw, base, rid) -> list:
         user = "\n".join(x for x in (title, desc, q) if x)
         out.append(WorkItem(rid + i, f"{base}#{rid + i}",
                             [{"role": "user", "content": user}, {"role": "assistant", "content": s}],
-                            meta={"format": "cmb_clin", "doc_id": raw.get("id"), "title": title}))
+                            meta={"format": "cmb_clin", "doc_id": raw.get("id"), "title": title,
+                                  "alpaca_instruction": q, "alpaca_input": ctx_text, "alpaca_output": s}))
     if not out:
         raise ValueError(f"{base}#{rid}: QA_pairs 均无法解析")
     return out
