@@ -59,7 +59,8 @@ class TestMedical(_Base):
         self._assert_rows(self._run("cmb_clin_medical.jsonl", "medical_qa"), output_in="诊断", input_nonempty=True, input_in="现病史")
 
     def test_toyhom_medical_qa_kept(self):
-        self._assert_rows(self._run("toyhom_medical.csv", "medical_qa"), output_in="党参", input_nonempty=False)
+        # 科室/标题元信息拆进 input，ask 留 instruction
+        self._assert_rows(self._run("toyhom_medical.csv", "medical_qa"), output_in="党参", input_nonempty=True, input_in="科室")
 
     def test_medqa_medical_qa_kept(self):
         self._assert_rows(self._run("medqa_medical.jsonl", "medical_qa"), output_start="答案", input_nonempty=False)
