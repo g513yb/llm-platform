@@ -16,6 +16,24 @@ llm-platform 的「数据处理」可直接读取阿里/清华等来源的**医�
 - **GitHub 仓库**：`git clone <url>` 后，直接上传仓库里的 `.jsonl`/`.csv`；raw 文书 `.txt` 也支持（法律走规则抽取合成问答对）。
 - 上传后在「数据处理」Tab：选领域（医疗/法律/金融）→ 选**预设** → 选文件 → 运行处理 → 落盘 **Alpaca `{instruction,input,output}`**（训练用；`config.OUTPUT_FORMAT` 可切回 `sharegpt`）。
 
+## 自动下载（测试/重建 fixture 流水线）
+
+`tests/download_datasets.py` 可自动获取下表全部数据源到 `tests/fixtures/_downloads/`（**不入库**）：
+
+- **本地预览**：`python tests/download_datasets.py --list` / `--dry-run --all`
+- **选择性下载**：`python tests/download_datasets.py --source cmb,toyhom,lawbench`
+- **全量下载**：`python tests/download_datasets.py --all [--force] [--limit-files N] [--quiet]`
+- **云端一键流水线**（下载→重建 fixtures→跑测试→可视化报告）：
+  ```bash
+  git add -A && git commit -m "..." && git push origin main
+  ./deploy.sh datatest      # 云端运行 tests/cloud_run.sh
+  ./deploy.sh report        # 转发端口，浏览器打开 http://localhost:8899/report.html
+  ```
+- 特性：幂等（已下载跳过，`.done.json` + `--force` 重下）、断点续传 `.part`、失败指数退避重试、逐源进度、
+  单源失败不阻断其它、末尾 `manifest.json` 汇总；HuggingFace 源走 HF resolve URL 直下（零第三方依赖），
+  可设 `HF_ENDPOINT`（如 `https://hf-mirror.com`）访问镜像；MedQA 的 Google Drive 数据需可选依赖 `gdown`
+  （`pip install gdown`），否则提示手动放置到 `tests/fixtures/_downloads/medqa_drive/`。
+
 ---
 
 ## 医疗

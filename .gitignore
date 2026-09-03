@@ -12,6 +12,12 @@ __pycache__/
 data/
 data/_inbox/
 
+# 下载的原始数据集（download_datasets.py 落盘；云端重建 fixtures 用，不入库）
+tests/fixtures/_downloads/
+# 测试可视化报告（云端生成，不入库）
+tests/report.html
+tests/report.json
+
 # 工具产物目录（agent 工具/IDE 在仓库内生成的缓存与索引，不入库）
 **/.arts/
 **/.codegraph/

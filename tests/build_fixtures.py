@@ -10,8 +10,11 @@
 """
 from __future__ import annotations
 
+import argparse
 import json
+import os
 import random
+import re
 import sys
 from pathlib import Path
 
@@ -20,8 +23,19 @@ import pandas as pd
 # ---- 路径 ----
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
-# 克隆暂存目录（Windows 真实路径）；Git Bash 的 /tmp 即 %LOCALAPPDATA%/Temp
-SCRATCH = Path(r"C:\Users\m1887\AppData\Local\Temp\llm_fixtures_scratch")
+# 克隆暂存目录：默认 tests/fixtures/_downloads（download_datasets.py 落盘处，不入库）；
+# 可用环境变量 LLM_FIXTURES_SCRATCH 覆盖（旧版为 %LOCALAPPDATA%/Temp/llm_fixtures_scratch）
+SCRATCH = Path(os.environ.get("LLM_FIXTURES_SCRATCH", str(FIXTURES / "_downloads")))
+# --check 模式校验的关键产物（云端流水线在测试前先确保它们存在）
+KEY_FIXTURES = [
+    "cmb_exam_medical.jsonl", "cmb_clin_medical.jsonl", "toyhom_medical.csv",
+    "lawbench_qa_legal.jsonl", "raw_legal_judgment.txt", "cmmlu_education.csv",
+    "mmlu_education.csv", "fineval_mcq_finance.jsonl", "fingpt_finance.jsonl",
+    "educhat_education.jsonl", "medqa_medical.jsonl", "huatuo_medical.jsonl",
+    "disc_law_legal.jsonl", "lawbench_summary_legal.jsonl", "raw_medical.txt",
+]
+# 每个可扩充源截取的样本数（--samples 覆盖）；单条精选/构造样本不受此影响
+SAMPLES = int(os.environ.get("LLM_FIXTURES_SAMPLES", "100"))
 
 rng = random.Random(7)
 NOTES: list[str] = []
@@ -58,30 +72,79 @@ def write_txt(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+# ============================================================ 0. 真实数据读取 helper
+def _cmb_zipped_root() -> Path:
+    """CMB-Exam/CMB-Clin 原始 JSON 在 data/CMB.zip 内，自动解压一次并缓存目录。"""
+    out = SCRATCH / "cmb_unzipped"
+    if (out / "CMB").is_dir():
+        return out / "CMB"
+    zip_path = SCRATCH / "cmb" / "data" / "CMB.zip"
+    if not zip_path.exists():
+        raise FileNotFoundError(
+            f"缺少 {zip_path}；请先运行 `python tests/download_datasets.py --source cmb`。"
+            "（构建将尝试其它真实源并警告跳过）")
+    import zipfile
+    zipfile.ZipFile(zip_path).extractall(out)
+    return out / "CMB"
+
+
+def _first_parquet_row(d: Path) -> dict | None:
+    """读目录下首个 parquet 的首行（numpy 标量转原生以便 JSON 序列化）；无 pyarrow/无文件返回 None。"""
+    try:
+        for p in sorted(d.rglob("*.parquet")):
+            df = pd.read_parquet(p)
+            if len(df):
+                return {k: (v.item() if hasattr(v, "item") else v)
+                        for k, v in df.iloc[0].to_dict().items()}
+    except (ImportError, OSError, ValueError):
+        return None
+    return None
+
+
+def _first_jsonl_row(d: Path, **required) -> dict | None:
+    """扫目录下 *.jsonl，返回首个含 required 键且非空的首行；找不到返回 None。"""
+    for p in sorted(d.rglob("*.jsonl")):
+        try:
+            for line in p.read_text(encoding="utf-8", errors="ignore").splitlines():
+                if not line.strip():
+                    continue
+                r = json.loads(line)
+                if all(str(r.get(k, "")).strip() for k in required):
+                    return r
+        except (json.JSONDecodeError, OSError):
+            continue
+    return None
+
+
 # ============================================================ 1. CMB-Exam
 def build_cmb_exam() -> None:
-    merge = load_json(SCRATCH / "CMB" / "unzipped" / "CMB" / "CMB-Exam" / "CMB-test" / "CMB-test-choice-question-merge.json")
-    ans = load_json(SCRATCH / "CMB" / "data" / "CMB-test-choice-answer.json")
+    merge = load_json(_cmb_zipped_root() / "CMB-Exam" / "CMB-test" / "CMB-test-choice-question-merge.json")
+    ans = load_json(SCRATCH / "cmb" / "data" / "CMB-test-choice-answer.json")
     ans_by_id = {a["id"]: a["answer"] for a in ans}
-    rec = next(r for r in merge if isinstance(r.get("option"), dict) and r.get("question_type") == "单项选择题")
-    row = {
-        "id": rec["id"], "exam_type": rec["exam_type"], "exam_class": rec["exam_class"],
-        "exam_subject": rec["exam_subject"], "question_type": rec["question_type"],
-        "question": rec["question"], "option": rec["option"],
-        "answer": ans_by_id.get(rec["id"], "A"),
-    }
-    write_jsonl(FIXTURES / "cmb_exam_medical.jsonl", [row])
-    note("cmb_exam_medical.jsonl   ← 真实 CMB-Exam（question+option 与 answer 两份文件 join）")
+    rows = []
+    for rec in merge:
+        if isinstance(rec.get("option"), dict) and rec.get("question_type") == "单项选择题":
+            rows.append({"id": rec["id"], "exam_type": rec["exam_type"], "exam_class": rec["exam_class"],
+                         "exam_subject": rec["exam_subject"], "question_type": rec["question_type"],
+                         "question": rec["question"], "option": rec["option"],
+                         "answer": ans_by_id.get(rec["id"], "A")})
+            if len(rows) >= SAMPLES:
+                break
+    write_jsonl(FIXTURES / "cmb_exam_medical.jsonl", rows)
+    note(f"cmb_exam_medical.jsonl   ← 真实 CMB-Exam（{len(rows)} 条单选题）")
 
 
 # ============================================================ 2. CMB-Clin
 def build_cmb_clin() -> None:
-    data = load_json(SCRATCH / "CMB" / "unzipped" / "CMB" / "CMB-Clin" / "CMB-Clin-qa.json")
-    rec = data[0]
-    row = {"id": rec["id"], "title": rec["title"], "description": rec["description"],
-           "QA_pairs": rec["QA_pairs"][:1]}
-    write_jsonl(FIXTURES / "cmb_clin_medical.jsonl", [row])
-    note("cmb_clin_medical.jsonl   ← 真实 CMB-Clin（id/title/description/QA_pairs）")
+    data = load_json(_cmb_zipped_root() / "CMB-Clin" / "CMB-Clin-qa.json")
+    rows = []
+    for rec in data:
+        rows.append({"id": rec["id"], "title": rec["title"], "description": rec["description"],
+                     "QA_pairs": rec["QA_pairs"][:1]})
+        if len(rows) >= SAMPLES:
+            break
+    write_jsonl(FIXTURES / "cmb_clin_medical.jsonl", rows)
+    note(f"cmb_clin_medical.jsonl   ← 真实 CMB-Clin（{len(rows)} 条）")
 
 
 # ============================================================ 3. CMB-Clin _bad（缺主诉+诊断）
@@ -97,7 +160,7 @@ def build_cmb_clin_bad() -> None:
 
 # ============================================================ 4. raw 病历（真实 CMB-Clin description + 诊断）
 def build_raw_medical() -> None:
-    data = load_json(SCRATCH / "CMB" / "unzipped" / "CMB" / "CMB-Clin" / "CMB-Clin-qa.json")
+    data = load_json(_cmb_zipped_root() / "CMB-Clin" / "CMB-Clin-qa.json")
     rec = data[0]
     desc = rec["description"]
     dx = ""
@@ -125,63 +188,125 @@ def _read_any(path: Path) -> pd.DataFrame:
 
 
 def build_toyhom() -> None:
-    csvs = sorted((SCRATCH / "Toyhom" / "Data_数据" / "IM_内科").glob("*.csv"), key=lambda p: p.stat().st_size)
-    df = _read_any(csvs[0])
-    row = df.iloc[0]
-    # 保留真实列，按 GBK 落盘（绕 reader 的 utf-8-sig→gbk 分支）
+    csvs = sorted((SCRATCH / "toyhom" / "Data_数据" / "IM_内科").glob("*.csv"), key=lambda p: p.stat().st_size)
+    rows = []
+    for csv in csvs:
+        df = _read_any(csv)
+        for _, row in df.iterrows():
+            rows.append(row.to_dict())
+            if len(rows) >= SAMPLES:
+                break
+        if len(rows) >= SAMPLES:
+            break
     (FIXTURES / "toyhom_medical.csv").parent.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame([row]).to_csv(FIXTURES / "toyhom_medical.csv", index=False, encoding="gbk")
-    note("toyhom_medical.csv   ← 真实 Toyhom（GBK，department/title/ask/answer）")
+    pd.DataFrame(rows).to_csv(FIXTURES / "toyhom_medical.csv", index=False, encoding="gbk")
+    note(f"toyhom_medical.csv   ← 真实 Toyhom（{len(rows)} 条，GBK）")
 
 
-# ============================================================ 6. MedQA（用真实 CMB-Exam 内容重排为 MedQA schema）
+# ============================================================ 6. MedQA（真实优先：Drive 题库；兜底：CMB-Exam 重排）
 def build_medqa() -> None:
-    scr = FIXTURES / "cmb_exam_medical.jsonl"
-    rec = json.loads(scr.read_text(encoding="utf-8").splitlines()[0])
-    row = {
-        "question": rec["question"],
-        "options": rec["option"],
-        "answer_idx": rec["answer"],
-        "answer": "结合题干与选项，正确答案应为首项（示例解析）。",
-        "meta_info": {"src": "us", "subjects": ["surgery"]},
-    }
-    write_jsonl(FIXTURES / "medqa_medical.jsonl", [row])
-    note("medqa_medical.jsonl   ← 由真实 CMB-Exam 重排为 MedQA schema（本机 MedQA 数据在 Google Drive 不可下），reader 分支等价")
+    rows = []
+    for p in sorted((SCRATCH / "medqa_drive").rglob("*.jsonl")):
+        try:
+            for line in p.read_text(encoding="utf-8", errors="ignore").splitlines():
+                if not line.strip():
+                    continue
+                r = json.loads(line)
+                if r.get("question") and r.get("options") and r.get("answer_idx") and isinstance(r.get("options"), (dict, list)):
+                    rows.append({"question": r["question"], "options": r["options"],
+                                 "answer_idx": r["answer_idx"], "answer": r.get("answer", ""),
+                                 "meta_info": r.get("meta_info", {})})
+                    if len(rows) >= SAMPLES:
+                        break
+        except (json.JSONDecodeError, OSError):
+            continue
+        if len(rows) >= SAMPLES:
+            break
+    if rows:
+        note(f"medqa_medical.jsonl   ← 真实 MedQA 题库（{len(rows)} 条，_downloads/medqa_drive/）")
+    else:
+        for line in (FIXTURES / "cmb_exam_medical.jsonl").read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            rec = json.loads(line)
+            rows.append({"question": rec["question"], "options": rec["option"],
+                         "answer_idx": rec["answer"], "answer": "结合题干与选项，正确答案应为首项（示例解析）。",
+                         "meta_info": {"src": "us", "subjects": ["surgery"]}})
+            if len(rows) >= SAMPLES:
+                break
+        note(f"medqa_medical.jsonl   ← 兜底：CMB-Exam 重排为 MedQA schema（{len(rows)} 条）")
+    write_jsonl(FIXTURES / "medqa_medical.jsonl", rows)
 
 
-# ============================================================ 7. Huatuo（Q&A 重排为 question/response）
+# ============================================================ 7. Huatuo（真实优先：HF parquet；兜底：Toyhom 重排）
+def _parquet_rows(d: Path, n: int, **required) -> list[dict]:
+    """读目录下 parquet 前 n 行（含 required 非空键）；无 pyarrow/无文件返回 []。"""
+    out = []
+    try:
+        for p in sorted(d.rglob("*.parquet")):
+            df = pd.read_parquet(p)
+            for _, r in df.iterrows():
+                if all(str(r.get(k, "")).strip() for k in required):
+                    out.append({k: (v.item() if hasattr(v, "item") else v) for k, v in r.to_dict().items()})
+                    if len(out) >= n:
+                        return out
+    except (ImportError, OSError, ValueError):
+        return []
+    return out
+
+
 def build_huatuo() -> None:
-    # 复用 Toyhom 真实 ask/answer
-    src = pd.read_csv(FIXTURES / "toyhom_medical.csv", encoding="gbk").iloc[0]
-    row = {"question": str(src["ask"]), "response": str(src["answer"])}
-    write_jsonl(FIXTURES / "huatuo_medical.jsonl", [row])
-    note("huatuo_medical.jsonl   ← 由真实 Toyhom 问答重排为 Huatuo(question/response) schema；Huatuo-26M 仅 HF 托管、本机不可下")
+    rows = []
+    for r in _parquet_rows(SCRATCH / "huatuo", SAMPLES, question="", response=""):
+        rows.append({"question": str(r["question"]), "response": str(r["response"])})
+    if rows:
+        note(f"huatuo_medical.jsonl   ← 真实 Huatuo-26M（{len(rows)} 条，需 pyarrow）")
+    else:
+        df = pd.read_csv(FIXTURES / "toyhom_medical.csv", encoding="gbk")
+        for _, src in df.iterrows():
+            rows.append({"question": str(src["ask"]), "response": str(src["answer"])})
+            if len(rows) >= SAMPLES:
+                break
+        note(f"huatuo_medical.jsonl   ← 兜底：Toyhom 问答重排（{len(rows)} 条）")
+    write_jsonl(FIXTURES / "huatuo_medical.jsonl", rows)
 
 
 # ============================================================ 8. LawBench-QA
 def build_lawbench_qa() -> None:
-    data = load_json(SCRATCH / "LawBench" / "data" / "zero_shot" / "2-1.json")
-    rec = next(r for r in data if isinstance(r, dict) and r.get("question") and r.get("answer"))
-    row = {"question": rec["question"], "answer": rec["answer"]}
-    write_jsonl(FIXTURES / "lawbench_qa_legal.jsonl", [row])
-    note("lawbench_qa_legal.jsonl   ← 真实 LawBench zero_shot/2-1（question/answer）")
+    data = load_json(SCRATCH / "lawbench" / "data" / "zero_shot" / "2-1.json")
+    rows = []
+    for rec in data:
+        if isinstance(rec, dict) and rec.get("question") and rec.get("answer"):
+            rows.append({"question": rec["question"], "answer": rec["answer"]})
+            if len(rows) >= SAMPLES:
+                break
+    write_jsonl(FIXTURES / "lawbench_qa_legal.jsonl", rows)
+    note(f"lawbench_qa_legal.jsonl   ← 真实 LawBench zero_shot/2-1（{len(rows)} 条）")
 
 
-# ============================================================ 9. DISC-Law-SFT（Alpaca，重排真实 LawBench）
+# ============================================================ 9. DISC-Law-SFT（真实优先：HF parquet Alpaca；兜底：LawBench 重排）
 def build_disc_law() -> None:
-    data = load_json(SCRATCH / "LawBench" / "data" / "zero_shot" / "2-1.json")
-    rec = next(r for r in data if isinstance(r, dict) and r.get("question") and r.get("answer"))
-    row = {"instruction": rec.get("instruction", "回答以下法律问题。"), "input": rec["question"],
-           "output": rec["answer"]}
-    write_jsonl(FIXTURES / "disc_law_legal.jsonl", [row])
-    note("disc_law_legal.jsonl   ← 由真实 LawBench 重排为 Alpaca；DISC-Law-SFT 仅 HF 托管、本机不可下")
+    rows = []
+    for r in _parquet_rows(SCRATCH / "disc_law", SAMPLES, instruction="", output=""):
+        rows.append({"instruction": str(r["instruction"]), "input": str(r.get("input", "")), "output": str(r["output"])})
+    if rows:
+        note(f"disc_law_legal.jsonl   ← 真实 DISC-Law-SFT（{len(rows)} 条，需 pyarrow）")
+    else:
+        data = load_json(SCRATCH / "lawbench" / "data" / "zero_shot" / "2-1.json")
+        for rec in data:
+            if isinstance(rec, dict) and rec.get("question") and rec.get("answer"):
+                rows.append({"instruction": rec.get("instruction", "回答以下法律问题。"), "input": rec["question"], "output": rec["answer"]})
+                if len(rows) >= SAMPLES:
+                    break
+        note(f"disc_law_legal.jsonl   ← 兜底：LawBench 重排为 Alpaca（{len(rows)} 条）")
+    write_jsonl(FIXTURES / "disc_law_legal.jsonl", rows)
 
 
 # ============================================================ 10. LawBench-摘要（article/summary）
 def build_lawbench_summary() -> None:
     # 无真实 article/summary；用真实刑法条文作 article，summary 为构造（短）
     try:
-        lines = (SCRATCH / "LawCrime" / "crime_law.txt").read_text(encoding="utf-8", errors="ignore").splitlines()
+        lines = (SCRATCH / "lawcrime" / "crime_law.txt").read_text(encoding="utf-8", errors="ignore").splitlines()
         art = next(l.strip() for l in lines if l.strip().startswith("第") and "条" in l)
     except Exception:
         art = "《中华人民共和国刑法》第二百六十四条：盗窃公私财物，数额较大的，处三年以下有期徒刑、拘役或者管制。"
@@ -192,7 +317,7 @@ def build_lawbench_summary() -> None:
 
 # ============================================================ 11. raw 判决书（真实 LawCrime）+ _bad（去案号）
 def build_raw_legal() -> None:
-    text = (SCRATCH / "LawCrime" / "corpus_lawsuit" / "24.txt").read_text(encoding="utf-8", errors="ignore")
+    text = (SCRATCH / "lawcrime" / "corpus_lawsuit" / "24.txt").read_text(encoding="utf-8", errors="ignore")
     # 去掉 metadata 两行（category/title/publictime），仅保留 content 正文
     body = text.split("content:", 1)[-1]
     write_txt(FIXTURES / "raw_legal_judgment.txt", body.strip())
@@ -224,25 +349,74 @@ def build_raw_contract() -> None:
     note("raw_legal_contract.txt   ← 构造（无真实合同语料来源），测 legal_cn 合同结构")
 
 
-# ============================================================ 13. FinEval MCQ + QA（重排真实内容）
+# ============================================================ 13. FinEval MCQ + QA（真实优先：data-v2 jsonl；兜底：CMB/Toyhom 重排）
 def build_fineval() -> None:
-    rec = json.loads((FIXTURES / "cmb_exam_medical.jsonl").read_text(encoding="utf-8").splitlines()[0])
-    mcq = {"question": rec["question"], "options": rec["option"], "answer": rec["answer"],
-           "Explanation": "结合题干与选项分析可得（示例解析）。"}
-    write_jsonl(FIXTURES / "fineval_mcq_finance.jsonl", [mcq])
-    qa = pd.read_csv(FIXTURES / "toyhom_medical.csv", encoding="gbk").iloc[0]
-    write_jsonl(FIXTURES / "fineval_qa_finance.jsonl", [{"question": str(qa["ask"]), "answer": str(qa["answer"])}])
-    note("fineval_mcq/qa_finance.jsonl   ← 由真实 CMB-Exam / Toyhom 重排为 FinEval schema（FinEval 数据在 .rar、本机无法解压）")
+    mcq_rows: list[dict] = []
+    qa_rows: list[dict] = []
+    for p in sorted((SCRATCH / "fineval" / "data-v2").rglob("*.jsonl")):
+        try:
+            for line in p.read_text(encoding="utf-8", errors="ignore").splitlines():
+                if not line.strip():
+                    continue
+                r = json.loads(line)
+                if r.get("question") and r.get("options") and r.get("answer") and len(mcq_rows) < SAMPLES:
+                    mcq_rows.append({"question": r["question"], "options": r["options"], "answer": r["answer"],
+                                     "Explanation": r.get("Explanation", r.get("explanation", ""))})
+                if r.get("question") and r.get("answer") and not r.get("options") and len(qa_rows) < SAMPLES:
+                    qa_rows.append({"question": r["question"], "answer": r["answer"]})
+                if len(mcq_rows) >= SAMPLES and len(qa_rows) >= SAMPLES:
+                    break
+        except (json.JSONDecodeError, OSError):
+            continue
+        if len(mcq_rows) >= SAMPLES and len(qa_rows) >= SAMPLES:
+            break
+    if mcq_rows and qa_rows:
+        note(f"fineval_mcq/qa_finance.jsonl   ← 真实 FinEval data-v2（mcq {len(mcq_rows)} / qa {len(qa_rows)} 条）")
+    else:
+        for line in (FIXTURES / "cmb_exam_medical.jsonl").read_text(encoding="utf-8").splitlines():
+            if not line.strip() or len(mcq_rows) >= SAMPLES:
+                continue
+            rec = json.loads(line)
+            mcq_rows.append({"question": rec["question"], "options": rec["option"], "answer": rec["answer"],
+                             "Explanation": "结合题干与选项分析可得（示例解析）。"})
+        df = pd.read_csv(FIXTURES / "toyhom_medical.csv", encoding="gbk")
+        for _, t in df.iterrows():
+            if len(qa_rows) >= SAMPLES:
+                break
+            qa_rows.append({"question": str(t["ask"]), "answer": str(t["answer"])})
+        note(f"fineval_mcq/qa_finance.jsonl   ← 兜底：真实 CMB-Exam/Toyhom 重排为 FinEval schema（mcq {len(mcq_rows)} / qa {len(qa_rows)} 条）")
+    write_jsonl(FIXTURES / "fineval_mcq_finance.jsonl", mcq_rows)
+    write_jsonl(FIXTURES / "fineval_qa_finance.jsonl", qa_rows)
 
 
-# ============================================================ 14. fingpt（input/output）+ _bad
+# ============================================================ 14. fingpt（真实优先：HF parquet，挑无数值+单位的行以测 finance_cn 丢弃；兜底：构造）+ _bad（构造）
 def build_fingpt() -> None:
-    qa = pd.read_csv(FIXTURES / "toyhom_medical.csv", encoding="gbk").iloc[0]
-    write_jsonl(FIXTURES / "fingpt_finance.jsonl",
-                [{"input": "公司发布业绩预告，净利润大幅增长，市场情绪乐观。", "output": "positive"}])
+    rows: list[dict] = []
+    try:
+        for p in sorted((SCRATCH / "fingpt").rglob("*.parquet")):
+            df = pd.read_parquet(p)
+            for _, r in df.iterrows():
+                inp, out = str(r.get("input", "")).strip(), str(r.get("output", "")).strip()
+                if not inp or not out:
+                    continue
+                if re.search(r"\d+(?:\.\d+)?\s*(?:%|亿|万|元|股|吨|米|kg|ml|mg)", inp):
+                    continue   # 含数值+单位 → finance_cn 会保留，跳过以保丢弃分支可测
+                rows.append({"input": inp, "output": out})
+                if len(rows) >= SAMPLES:
+                    break
+            if len(rows) >= SAMPLES:
+                break
+    except (ImportError, OSError, ValueError):
+        pass
+    if rows:
+        note(f"fingpt_finance.jsonl   ← 真实 fingpt-sentiment（{len(rows)} 条，挑无数值+单位行，需 pyarrow）")
+    else:
+        rows = [{"input": "公司发布业绩预告，净利润大幅增长，市场情绪乐观。", "output": "positive"}]
+        note("fingpt_finance.jsonl   ← 兜底：构造（fingpt 未下/无 pyarrow/全含数值）")
+    write_jsonl(FIXTURES / "fingpt_finance.jsonl", rows)
     write_jsonl(FIXTURES / "fingpt_finance_cn_bad.jsonl",
                 [{"input": "公司发布业绩预告，市场情绪乐观。", "output": "positive"}])
-    note("fingpt_finance.jsonl / _bad   ← 构造（fingpt-sentiment 仅 HF 托管、本机不可下）；bad 无数值+单位")
+    note("  _bad ← 构造（无数值+单位，测 finance_cn 丢弃分支）")
 
 
 # ============================================================ 15. 金融数值研报（构造/测 finance_cn）
@@ -256,35 +430,118 @@ def build_finance_report() -> None:
     note("finance_report_cn.jsonl   ← 构造（含 %/亿元），测 finance_cn 数值+单位指标")
 
 
-# ============================================================ 16/17. MMLU / CMMLU（真实 CMMLU 行）
+# ============================================================ 16/17. MMLU / CMMLU（CMMLU 真实；MMLU 真实优先 data/csv，兜底用 CMMLU 行重排）
 def build_edu_mcq() -> None:
-    src = SCRATCH / "CMMLU" / "data" / "dev" / "agronomy.csv"
+    src = SCRATCH / "cmmlu" / "data" / "dev" / "agronomy.csv"
     df = pd.read_csv(src, encoding="utf-8")
-    row = df.iloc[1]  # 避开第一行（第0行有 Unnamed 序号问题，可保留）
-    rec = {"Question": str(row["Question"]), "A": str(row["A"]), "B": str(row["B"]),
-           "C": str(row["C"]), "D": str(row["D"]), "Answer": str(row["Answer"])}
-    # CMMLU：大写列 + 前导序号列（与真实源一致）
-    idx = {"Unnamed: 0": 1}
-    cmmlu = [dict(idx, **rec)]
+    cmmlu_rows = []
+    for i, row in df.iterrows():
+        if i == 0:
+            continue   # 避开第一行（第0行有 Unnamed 序号问题）
+        rec = {"Question": str(row["Question"]), "A": str(row["A"]), "B": str(row["B"]),
+               "C": str(row["C"]), "D": str(row["D"]), "Answer": str(row["Answer"])}
+        cmmlu_rows.append(dict({"Unnamed: 0": i}, **rec))
+        if len(cmmlu_rows) >= SAMPLES:
+            break
     (FIXTURES / "cmmlu_education.csv").parent.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(cmmlu).to_csv(FIXTURES / "cmmlu_education.csv", index=False, encoding="utf-8")
-    # MMLU：小写列 question,A,B,C,D,answer
-    mmlu = [{"question": rec["Question"], "A": rec["A"], "B": rec["B"],
-             "C": rec["C"], "D": rec["D"], "answer": rec["Answer"]}]
-    pd.DataFrame(mmlu).to_csv(FIXTURES / "mmlu_education.csv", index=False, encoding="utf-8")
-    note("mmlu/cmmlu_education.csv   ← 真实 CMMLU agronomy 行；MMLU 本仓库无数据，用真实 CMMLU 内容按 MMLU 小写列重排")
+    pd.DataFrame(cmmlu_rows).to_csv(FIXTURES / "cmmlu_education.csv", index=False, encoding="utf-8")
+    # MMLU：真实优先 _downloads/mmlu/data/{dev,val,test}/*.csv（小写列 question,A..D,answer）
+    mmlu_rows: list[dict] = []
+    try:
+        for p in sorted((SCRATCH / "mmlu" / "data").rglob("*.csv")):
+            try:
+                mdf = pd.read_csv(p, encoding="utf-8")
+            except (UnicodeDecodeError, OSError, pd.errors.ParserError):
+                continue
+            if {"question", "a", "b", "c", "d", "answer"} <= {str(c).strip().lower() for c in mdf.columns}:
+                for _, mr in mdf.iterrows():
+                    mmlu_rows.append({"question": str(mr["question"]), "A": str(mr["A"]), "B": str(mr["B"]),
+                                      "C": str(mr["C"]), "D": str(mr["D"]), "answer": str(mr["answer"])})
+                    if len(mmlu_rows) >= SAMPLES:
+                        break
+            if len(mmlu_rows) >= SAMPLES:
+                break
+    except OSError:
+        pass
+    if mmlu_rows:
+        note(f"mmlu/cmmlu_education.csv   ← 真实 CMMLU agronomy {len(cmmlu_rows)} 行 + 真实 MMLU data csv {len(mmlu_rows)} 行")
+    else:
+        for c in cmmlu_rows:
+            mmlu_rows.append({"question": c["Question"], "A": c["A"], "B": c["B"],
+                              "C": c["C"], "D": c["D"], "answer": c["Answer"]})
+        note(f"mmlu/cmmlu_education.csv   ← 真实 CMMLU agronomy {len(cmmlu_rows)} 行；MMLU 兜底用 CMMLU 内容按小写列重排 {len(mmlu_rows)} 行")
+    pd.DataFrame(mmlu_rows).to_csv(FIXTURES / "mmlu_education.csv", index=False, encoding="utf-8")
 
 
-# ============================================================ 18. EduChat（Alpaca）+ _bad
+# ============================================================ 18. EduChat（真实优先：挑无选项标记的开放问答以测 education_cn 丢弃；兜底：构造）+ _bad（构造）
+def _looks_like_mcq(text: str) -> bool:
+    return bool(re.search(r"[A-D][.、)]\s|选项|选择题|单选|多选|答案是", text))
+
+
 def build_educhat() -> None:
-    write_jsonl(FIXTURES / "educhat_education.jsonl",
-                [{"instruction": "解释光合作用的过程。", "input": "", "output": "光合作用是植物利用光能，将二氧化碳和水转化为有机物并释放氧气的过程。"}])
+    rows: list[dict] = []
+    for p in sorted((SCRATCH / "educhat").rglob("*")):
+        if p.suffix not in (".jsonl", ".json", ".csv"):
+            continue
+        try:
+            if p.suffix == ".csv":
+                df = pd.read_csv(p, encoding="utf-8")
+                for _, r in df.iterrows():
+                    ins, out = str(r.get("instruction", "")).strip(), str(r.get("output", "")).strip()
+                    if ins and out and not _looks_like_mcq(ins):
+                        rows.append({"instruction": ins, "input": str(r.get("input", "")), "output": out})
+                        if len(rows) >= SAMPLES:
+                            break
+            else:
+                for line in p.read_text(encoding="utf-8", errors="ignore").splitlines():
+                    if not line.strip():
+                        continue
+                    r = json.loads(line)
+                    ins, out = str(r.get("instruction", "")).strip(), str(r.get("output", "")).strip()
+                    if ins and out and not _looks_like_mcq(ins):
+                        rows.append({"instruction": ins, "input": str(r.get("input", "")), "output": out})
+                        if len(rows) >= SAMPLES:
+                            break
+            if len(rows) >= SAMPLES:
+                break
+        except (json.JSONDecodeError, OSError, UnicodeDecodeError, pd.errors.ParserError):
+            continue
+    if rows:
+        note(f"educhat_education.jsonl   ← 真实 EduChat（{len(rows)} 条，挑无选项开放问答以测 education_cn 丢弃）")
+    else:
+        rows = [{"instruction": "解释光合作用的过程。", "input": "",
+                 "output": "光合作用是植物利用光能，将二氧化碳和水转化为有机物并释放氧气的过程。"}]
+        note("educhat_education.jsonl   ← 兜底：构造（educhat 未下/无 SFT/全为选择题）")
+    write_jsonl(FIXTURES / "educhat_education.jsonl", rows)
     write_jsonl(FIXTURES / "educhat_education_cn_bad.jsonl",
                 [{"instruction": "谈谈你对学习的看法。", "input": "", "output": "学习需要持之以恒、不断积累。"}])
-    note("educhat_education.jsonl / _bad   ← 构造（EduChat 仓库无 SFT 数据）；bad 开放问答不含选项/答案")
+    note("  _bad ← 构造（开放问答不含选项/答案，测 education_cn 丢弃分支）")
 
 
 def main() -> None:
+    global SCRATCH, SAMPLES
+    ap = argparse.ArgumentParser(prog="build_fixtures.py", description="从下载的数据源截取小样本生成 tests/fixtures/（离线冻结）。")
+    ap.add_argument("--check", action="store_true",
+                    help="仅校验关键 fixture 文件是否齐全（云端流水线用），不重建")
+    ap.add_argument("--scratch", type=Path, default=None,
+                    help=f"覆盖源数据目录（默认 {SCRATCH}，也可用 LLM_FIXTURES_SCRATCH 环境变量）")
+    ap.add_argument("--samples", type=int, default=SAMPLES,
+                    help=f"每个可扩充源截取的样本数（默认 {SAMPLES}；单条精选/构造样本不受影响）")
+    args = ap.parse_args()
+    if args.scratch:
+        SCRATCH = args.scratch
+    SAMPLES = args.samples
+
+    if args.check:
+        missing = [n for n in KEY_FIXTURES if not (FIXTURES / n).exists()]
+        if missing:
+            print("== 缺失关键 fixture（请先运行 python tests/download_datasets.py --all 再重建）==")
+            for n in missing:
+                print(f"  - {n}")
+            sys.exit(1)
+        print(f"== 关键 fixture 齐全（{len(KEY_FIXTURES)}/{len(KEY_FIXTURES)}）: {FIXTURES}")
+        return
+
     FIXTURES.mkdir(parents=True, exist_ok=True)
     builders = [
         build_cmb_exam, build_cmb_clin, build_cmb_clin_bad, build_raw_medical,
@@ -293,7 +550,8 @@ def main() -> None:
         build_fingpt, build_finance_report, build_edu_mcq, build_educhat,
     ]
     if not SCRATCH.is_dir():
-        warn(f"未找到克隆暂存目录 {SCRATCH}；请先 `git clone` 各源或重新运行。")
+        warn(f"未找到源数据目录 {SCRATCH}；请先运行 `python tests/download_datasets.py --all` 下载。"
+             f"（尚未下载的源将尝试重排/构造兜底）")
     for b in builders:
         try:
             b()

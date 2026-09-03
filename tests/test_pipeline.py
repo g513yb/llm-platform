@@ -66,7 +66,8 @@ class TestMedical(_Base):
         self._assert_rows(self._run("medqa_medical.jsonl", "medical_qa"), output_start="答案", input_nonempty=False)
 
     def test_huatuo_medical_qa_kept(self):
-        self._assert_rows(self._run("huatuo_medical.jsonl", "medical_qa"), output_in="党参", input_nonempty=False)
+        # 真实 Huatuo-26M 或兜底重排；output 内容不定，仅断言 kept 与结构
+        self._assert_rows(self._run("huatuo_medical.jsonl", "medical_qa"), input_nonempty=False)
 
     def test_raw_medical_medical_cn_kept(self):
         # 纯文本生成：含主诉+诊断 → 医疗严格预设保留；病历原文进 input
@@ -75,9 +76,9 @@ class TestMedical(_Base):
         self._assert_rows(s, output_in="主诉", input_nonempty=True)
 
     def test_cmb_clin_medical_cn_dropped(self):
-        # 真实 CMB-Clin 病历缺"诊断"小节 → 严格预设按文档规则丢弃
+        # 真实 CMB-Clin 病历缺"诊断"小节 → 严格预设按文档规则丢弃（扩充源，每条均丢）
         s = self._run("cmb_clin_medical.jsonl", "medical_cn")
-        self.assertEqual(s.total, 1); self.assertEqual(s.kept, 0); self.assertEqual(s.dropped, 1)
+        self.assertGreaterEqual(s.total, 1); self.assertEqual(s.kept, 0); self.assertGreaterEqual(s.dropped, 1)
         self.assertTrue(any(k.startswith("临床信息不完整") for k in s.drop_reasons), s.drop_reasons)
 
     def test_cmb_clin_bad_medical_cn_dropped(self):
@@ -93,14 +94,14 @@ class TestLegal(_Base):
         self._assert_rows(self._run("lawbench_qa_legal.jsonl", "legal_qa"), output_start="上述证据", input_nonempty=False)
 
     def test_lawbench_qa_legal_cn_dropped(self):
-        # 纯问答无文书结构 → legal_cn 质量分过低丢弃
+        # 纯问答无文书结构 → legal_cn 质量分过低丢弃（扩充源，每条均丢）
         s = self._run("lawbench_qa_legal.jsonl", "legal_cn")
-        self.assertEqual(s.dropped, 1); self.assertEqual(s.kept, 0)
+        self.assertGreaterEqual(s.dropped, 1); self.assertEqual(s.kept, 0)
         self.assertTrue(any(k.startswith("结构/领域质量分过低") for k in s.drop_reasons), s.drop_reasons)
 
     def test_disc_law_legal_qa_kept(self):
-        # 原始 Alpaca 有 instruction/input 拆分，input 应保留
-        self._assert_rows(self._run("disc_law_legal.jsonl", "legal_qa"), input_nonempty=True)
+        # 真实 DISC-Law-SFT 的 input 可空（Alpaca 常见）；兜底重排 input 非空。不断言 input
+        self._assert_rows(self._run("disc_law_legal.jsonl", "legal_qa"))
 
     def test_lawbench_summary_legal_qa_kept(self):
         # article 进 input
@@ -135,12 +136,13 @@ class TestFinance(_Base):
         self._assert_rows(self._run("fineval_qa_finance.jsonl", "finance_qa"), input_nonempty=False)
 
     def test_fingpt_finance_qa_kept(self):
-        self._assert_rows(self._run("fingpt_finance.jsonl", "finance_qa"), output_start="positive", input_nonempty=False)
+        # 真实 fingpt 或兜底构造；output 标签不定（positive/negative/neutral），仅断言 kept 与结构
+        self._assert_rows(self._run("fingpt_finance.jsonl", "finance_qa"), input_nonempty=False)
 
     def test_fingpt_finance_cn_dropped(self):
-        # 无"数值+单位"指标 → finance_cn 丢弃
+        # 无"数值+单位"指标 → finance_cn 丢弃（扩充源，每条均丢）
         s = self._run("fingpt_finance.jsonl", "finance_cn")
-        self.assertEqual(s.dropped, 1); self.assertEqual(s.kept, 0)
+        self.assertGreaterEqual(s.dropped, 1); self.assertEqual(s.kept, 0)
         self.assertTrue(any(k.startswith("缺少带单位的数值指标") for k in s.drop_reasons), s.drop_reasons)
 
     def test_fingpt_cn_bad_dropped(self):
@@ -158,23 +160,25 @@ class TestEducation(_Base):
     domain = "教育"
 
     def test_mmlu_cn_kept(self):
+        # 真实 MMLU 或兜底重排；答案字母不定，reader 加 "答案：" 前缀稳定（扩充源）
         s = self._run("mmlu_education.csv", "education_cn")
-        self.assertEqual(s.total, 1); self.assertEqual(s.dropped, 0); self.assertEqual(s.kept, 1)
-        self._assert_rows(s, output_start="答案", output_end="D", input_nonempty=False)
+        self.assertGreaterEqual(s.total, 1); self.assertEqual(s.dropped, 0); self.assertGreaterEqual(s.kept, 1)
+        self._assert_rows(s, output_start="答案", input_nonempty=False)
 
     def test_cmmlu_cn_kept(self):
-        # 大写列头+前导序号列（与真实 CMMLU 一致）
+        # 大写列头+前导序号列（与真实 CMMLU 一致）（扩充源）
         s = self._run("cmmlu_education.csv", "education_cn")
-        self.assertEqual(s.total, 1); self.assertEqual(s.dropped, 0); self.assertEqual(s.kept, 1)
+        self.assertGreaterEqual(s.total, 1); self.assertEqual(s.dropped, 0); self.assertGreaterEqual(s.kept, 1)
         self._assert_rows(s, output_start="答案", output_end="D", input_nonempty=False)
 
     def test_educhat_education_qa_kept(self):
-        self._assert_rows(self._run("educhat_education.jsonl", "education_qa"), output_in="光合作用", input_nonempty=False)
+        # 真实 EduChat 或兜底构造；output 内容不定，仅断言 kept 与结构
+        self._assert_rows(self._run("educhat_education.jsonl", "education_qa"), input_nonempty=False)
 
     def test_educhat_education_cn_dropped(self):
-        # 开放问答无选项/答案 → education_cn 丢弃
+        # 开放问答无选项/答案 → education_cn 丢弃（扩充源，每条均丢）
         s = self._run("educhat_education.jsonl", "education_cn")
-        self.assertEqual(s.dropped, 1); self.assertEqual(s.kept, 0)
+        self.assertGreaterEqual(s.dropped, 1); self.assertEqual(s.kept, 0)
         self.assertTrue(any(k.startswith("缺少选项或答案") for k in s.drop_reasons), s.drop_reasons)
 
     def test_educhat_cn_bad_dropped(self):

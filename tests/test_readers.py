@@ -49,11 +49,13 @@ class TestReaders(unittest.TestCase):
         self._assert_pair(reader("toyhom_medical.csv"), user_marker="科室：", asst_marker="党参")
 
     def test_medqa(self):
+        # 真实优先（Drive 题库）或兜底（CMB-Exam 重排）；reader 加 "题："/"答案：" 前缀稳定
         self._assert_pair(reader("medqa_medical.jsonl"),
-                          user_marker="题：", asst_start="答案", asst_marker="解析")
+                          user_marker="题：", asst_start="答案")
 
     def test_huatuo(self):
-        self._assert_pair(reader("huatuo_medical.jsonl"), user_marker="高血压")
+        # 真实 Huatuo-26M 或兜底重排；question 内容不定，仅结构断言
+        self._assert_pair(reader("huatuo_medical.jsonl"))
 
     def test_raw_medical_txt(self):
         # 纯文本必须走 read_txt_raw（.txt → medical 生成器）；NFKC 会把全角冒号转半角
@@ -61,7 +63,8 @@ class TestReaders(unittest.TestCase):
 
     # ---- 法律 ----
     def test_disc_law_alpaca(self):
-        self._assert_pair(reader("disc_law_legal.jsonl"), user_marker="纠正下面法律文书")
+        # 真实 DISC-Law-SFT 或兜底重排；instruction 内容不定，仅结构断言
+        self._assert_pair(reader("disc_law_legal.jsonl"))
 
     def test_lawbench_qa(self):
         self._assert_pair(reader("lawbench_qa_legal.jsonl"),
@@ -86,20 +89,20 @@ class TestReaders(unittest.TestCase):
         self._assert_pair(reader("fineval_mcq_finance.jsonl"), user_marker="题：", asst_start="答案")
 
     def test_fineval_qa(self):
-        self._assert_pair(reader("fineval_qa_finance.jsonl"), asst_marker="党参")
+        # 真实 FinEval 开放问答或兜底重排；answer 内容不定，仅结构断言
+        self._assert_pair(reader("fineval_qa_finance.jsonl"))
 
     def test_fingpt_input_output(self):
-        # {input, output} 走 Alpaca 分支④（无 instruction 时 user=input；generic_clean 归一掉 \n\n 前缀）
-        self._assert_pair(reader("fingpt_finance.jsonl"),
-                          user_marker="公司发布业绩预告", asst_start="positive")
+        # {input, output} 走 Alpaca 分支④；真实 fingpt 或兜底构造，内容不定，仅结构断言
+        self._assert_pair(reader("fingpt_finance.jsonl"))
 
     def test_finance_report(self):
         self._assert_pair(reader("finance_report_cn.jsonl"), user_marker="亿元", asst_marker="亿元")
 
     # ---- 教育 ----
     def test_mmlu_csv(self):
-        self._assert_pair(reader("mmlu_education.csv"),
-                          user_marker="下列鸭品种", asst_start="答案", asst_end="D")
+        # 真实 MMLU 或兜底重排；question 内容/答案字母不定，reader 加 "答案：" 前缀稳定
+        self._assert_pair(reader("mmlu_education.csv"), asst_start="答案")
 
     def test_cmmlu_csv(self):
         # 大写列头 + 前导序号列，reader 应正确识别 MCQ 分支
@@ -107,8 +110,8 @@ class TestReaders(unittest.TestCase):
                           user_marker="下列鸭品种", asst_start="答案", asst_end="D")
 
     def test_educhat_alpaca(self):
-        self._assert_pair(reader("educhat_education.jsonl"),
-                          user_marker="解释光合作用", asst_marker="光合作用")
+        # 真实 EduChat 或兜底构造；instruction/output 内容不定，仅结构断言
+        self._assert_pair(reader("educhat_education.jsonl"))
 
     def test_educhat_cn_bad_alpaca(self):
         self._assert_pair(reader("educhat_education_cn_bad.jsonl"), user_marker="学习的看法")

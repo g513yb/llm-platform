@@ -10,11 +10,25 @@ SSH_ALIAS="${SSH_ALIAS:-autodl}"            # 对应 ~/.ssh/config 里的 Host�
 REMOTE_DIR="/root/autodl-tmp/llm-platform"  # 放数据盘（持久、大、换镜像不丢）
 GIT_REPO="${GIT_REPO:-https://github.com/g513yb/llm-platform}"  # 云端克隆的远程仓库
 GIT_BRANCH="${GIT_BRANCH:-main}"           # 同步分支（先 push 到该分支，再 deploy）
-SPARSE_PATHS="${SPARSE_PATHS:-app.py config.py requirements.txt run.sh start_app.sh llm_platform resources}"  # 云端运行所需顶层路径白名单（稀疏检出）；docs/README/CLAUDE/LICENSE/tests/samples/*.bat 等不检出
+SPARSE_PATHS="${SPARSE_PATHS:-app.py config.py requirements.txt run.sh start_app.sh llm_platform resources tests}"  # 云端运行所需顶层路径白名单（稀疏检出）；tests/ 供云端跑数据下载+测试流水线（./deploy.sh datatest），docs/README/CLAUDE/LICENSE/samples/*.bat 等不检出
 REMOTE_INIT="source /root/miniconda3/etc/profile.d/conda.sh 2>/dev/null && conda activate base 2>/dev/null"
 
 if [[ "${1:-}" == "logs" ]]; then
   exec ssh "$SSH_ALIAS" "$REMOTE_INIT; tail -n 100 $REMOTE_DIR/app.log"
+fi
+
+if [[ "${1:-}" == "datatest" ]]; then
+  echo "[deploy] 云端运行测试流水线（下载数据→重建 fixtures→跑测试→可视化报告）..."
+  ssh "$SSH_ALIAS" "$REMOTE_INIT; cd $REMOTE_DIR && bash tests/cloud_run.sh"
+  exit 0
+fi
+
+if [[ "${1:-}" == "report" ]]; then
+  echo "[deploy] 云端起静态服务并转发端口，本机浏览器查看测试报告..."
+  ssh "$SSH_ALIAS" "pkill -f 'http.server 8899' 2>/dev/null || true; cd $REMOTE_DIR/tests && (nohup python -m http.server 8899 --bind 127.0.0.1 >/dev/null 2>&1 &); sleep 1; echo serving report.html"
+  ssh -f -N -L 8899:127.0.0.1:8899 "$SSH_ALIAS" 2>/dev/null || echo "端口转发可能已存在"
+  echo "浏览器打开: http://localhost:8899/report.html "
+  exit 0
 fi
 
 if [[ "${1:-}" == "start" ]]; then
