@@ -267,8 +267,7 @@ def download_git(src: GitSource, dest: Path, quiet: bool) -> dict:
     info(f"  {src.slug}: git clone {src.url} ...")
     repo_dir.parent.mkdir(parents=True, exist_ok=True)
     clone = ["git", "clone", "--depth=1", "--no-tags"]
-    if sys.platform != "win32":
-        clone += ["--filter=blob:none"]
+
     clone += [src.url, str(repo_dir)]
     run_cmd(clone, repo_dir.parent, quiet=quiet)
     _apply_sparse(repo_dir, src, quiet)
