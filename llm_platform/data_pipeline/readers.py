@@ -143,9 +143,11 @@ def _csv_qa_to_sharegpt(df, cols):
         if t:
             pre.append(f"标题：{t}")
         user = (f"（{'；'.join(pre)}）\n" if pre else "") + q
+        ctx = "；".join(pre)
         out.append({"messages": [{"role": "user", "content": user},
                                  {"role": "assistant", "content": a}],
-                    "_meta": {"format": "toyhom", "department": d, "title": t}})
+                    "_meta": {"format": "toyhom", "department": d, "title": t,
+                              "alpaca_instruction": q, "alpaca_input": ctx, "alpaca_output": a}})
     return out
 
 
