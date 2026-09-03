@@ -63,7 +63,7 @@ llm-platform/
 ├── requirements.txt           # 云端运行依赖（不重装 AutoDL 自带 CUDA torch）
 ├── run.sh                     # AutoDL 启动脚本
 ├── run.bat                    # 本机提示（需在云端跑 GPU）
-├── deploy.sh                  # 一键推码到云端 + 装依赖 + 后台启动 / 看日志
+├── deploy.sh                  # 一键让云端 git clone/pull 同步代码 + 装依赖 + 后台启动 / 看日志
 ├── start_app.sh               # 云端后台启动脚本（setsid 脱离会话）
 ├── samples/                   # 示例数据（仅开发测试，不进 UI 入口）
 ├── .venv-verify/              # 本地轻量 venv（仅 pandas，用于纯 CPU 管道本地验证）
@@ -102,8 +102,8 @@ llm-platform/
 ## 快速开始
 
 ### 云端（AutoDL）
-1. **传代码**：`scp`/JupyterLab/`git` 把本目录放到实例，如 `/root/autodl-tmp/llm-platform`（数据盘）。
-2. **一键部署**（也可只用 `./deploy.sh` 反复推代码 + 重启）：
+1. **同步代码**：代码不经本地直传，统一走 GitHub 远程仓库。本机先 `git push origin main`，再 `./deploy.sh` 通过 ssh 让云端 **浅克隆 + 稀疏检出**（`--depth=1` + `git sparse-checkout`，仅拉运行所需、排除 `docs/`/测试/本机脚本等）到 `/root/autodl-tmp/llm-platform`（数据盘）。
+2. **一键部署**（`./deploy.sh` 已含同步 + 装依赖；也可单独云端手启）：
    ```bash
    cd /root/autodl-tmp/llm-platform && bash run.sh
    # = pip install -r requirements.txt && python app.py
@@ -179,7 +179,7 @@ print(res.kept, res.drop_reasons, res.output_files)   # 落盘 data/医疗_alpac
 - **无卡能看到数据处理但点对话报错**：正常，属预期。
 - **首次权重下载慢**：AutoDL 开「学术加速」。
 - **版本冲突**：AutoDL 镜像 torch 较旧时，去掉 `requirements.txt` 里 `transformers` 的版本号再 `pip install -U transformers gradio accelerate`。
-- **本地改代码要上云**：`./deploy.sh` 一键推码 + 重启；`./deploy.sh logs` 看日志。
+- **本地改代码要上云**：`git push origin main` 后 `./deploy.sh`（云端 git pull 同步 + 装依赖）+ `./deploy.sh start` 重启；`./deploy.sh logs` 看日志。
 
 ## 路线图
 

@@ -20,7 +20,7 @@ Gradio(BLOCKS) + PyTorch + HuggingFace Transformers + PEFT(LoRA) 的多领域大
 - `resources/{_shared,medical,legal,finance,education}/`；`docs/DATASETS.md`（数据集用法）、`docs/ENVIRONMENT.md`（部署）。
 
 ## 常用命令
-- 云端部署（本机）：`./deploy.sh`（推码+装依赖）、`./deploy.sh start`（后台启动）、`./deploy.sh logs`（看日志）；本机 `ssh -N -L 7860:localhost:7860 autodl` 转发，浏览器 `http://localhost:7860`。
+- 云端部署（本机）：先 `git push origin main`，再 `./deploy.sh`（ssh 让云端 `git clone/pull` 远程仓库同步代码 + 装依赖）、`./deploy.sh start`（后台启动）、`./deploy.sh logs`（看日志）；本机 `ssh -N -L 7860:localhost:7860 autodl` 转发，浏览器 `http://localhost:7860`。代码不本地直传，统一走 GitHub 仓库；浅克隆 `--depth=1` + 稀疏检出仅拉运行所需（`SPARSE_PATHS` 白名单，排除 docs/测试/本机脚本等）。
 - 云端手启：`bash run.sh` 或 `bash start_app.sh`。
 - **本地纯 CPU 验证**（无需 GPU/云）：`cd D:\claude\llm-platform && PYTHONIOENCODING=utf-8 .venv-verify/Scripts/python - <<'PY' … PY`（`.venv-verify` 仅 pandas/numpy）。
 - Git：`git add -A && git commit -m "…" && git push origin main`；仓库 `https://github.com/g513yb/llm-platform`；`gh` CLI 已装（`C:\Program Files\GitHub CLI\gh.exe`）。
