@@ -39,14 +39,15 @@ class TestReaders(unittest.TestCase):
 
     def test_cmb_clin(self):
         # 真实 CMB-Clin：QA_pairs 用 answer 键（reader 已做 solution/answer 兼容）
-        self._assert_pair(reader("cmb_clin_medical.jsonl"), asst_marker="诊断")
+        self._assert_pair(reader("cmb_clin_medical.jsonl"))
 
     def test_cmb_clin_bad_normalizes(self):
         # 构造坏样本也能被正常归一化（丢弃发生在预设级，而非 reader）
         self._assert_pair(reader("cmb_clin_medical_cn_bad.jsonl"))
 
     def test_toyhom_gbk(self):
-        self._assert_pair(reader("toyhom_medical.csv"), user_marker="科室：", asst_marker="党参")
+        # 真实 Toyhom GBK CSV；科室前缀稳定，answer 内容不定，仅结构+前缀断言
+        self._assert_pair(reader("toyhom_medical.csv"), user_marker="科室：")
 
     def test_medqa(self):
         # 真实优先（Drive 题库）或兜底（CMB-Exam 重排）；reader 加 "题："/"答案：" 前缀稳定
@@ -67,8 +68,8 @@ class TestReaders(unittest.TestCase):
         self._assert_pair(reader("disc_law_legal.jsonl"))
 
     def test_lawbench_qa(self):
-        self._assert_pair(reader("lawbench_qa_legal.jsonl"),
-                          user_marker="上诉证据收集程序合法", asst_start="上述证据")
+        # 真实 LawBench QA；instruction/answer 内容不定，仅结构断言
+        self._assert_pair(reader("lawbench_qa_legal.jsonl"))
 
     def test_lawbench_summary(self):
         # 必须命中 article+summary 分支（用 output 会被 Alpaca 分支吞掉）
@@ -105,9 +106,8 @@ class TestReaders(unittest.TestCase):
         self._assert_pair(reader("mmlu_education.csv"), asst_start="答案")
 
     def test_cmmlu_csv(self):
-        # 大写列头 + 前导序号列，reader 应正确识别 MCQ 分支
-        self._assert_pair(reader("cmmlu_education.csv"),
-                          user_marker="下列鸭品种", asst_start="答案", asst_end="D")
+        # 大写列头 + 前导序号列，reader 应正确识别 MCQ 分支；question/答案字母不定，"答案：" 前缀稳定
+        self._assert_pair(reader("cmmlu_education.csv"), asst_start="答案")
 
     def test_educhat_alpaca(self):
         # 真实 EduChat 或兜底构造；instruction/output 内容不定，仅结构断言
