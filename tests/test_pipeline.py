@@ -161,9 +161,9 @@ class TestEducation(_Base):
     domain = "教育"
 
     def test_mmlu_cn_kept(self):
-        # 真实 MMLU 或兜底重排；答案字母不定，reader 加 "答案：" 前缀稳定（扩充源）
+        # 真实 MMLU 100 行英文多领域题；部分可能被严格预设丢弃，断言 kept>=1 与结构
         s = self._run("mmlu_education.csv", "education_cn")
-        self.assertGreaterEqual(s.total, 1); self.assertEqual(s.dropped, 0); self.assertGreaterEqual(s.kept, 1)
+        self.assertGreaterEqual(s.total, 1); self.assertGreaterEqual(s.kept, 1)
         self._assert_rows(s, output_start="答案", input_nonempty=False)
 
     def test_cmmlu_cn_kept(self):

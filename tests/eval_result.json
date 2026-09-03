@@ -1,0 +1,246 @@
+{
+  "eval_timestamp": "2026-09-03",
+  "eval_model": "GLM-5.2",
+  "total_cases": 26,
+  "cases": [
+    {
+      "test_id": "test_cmb_exam_medical_qa_kept",
+      "domain": "医疗", "preset": "medical_qa", "output_rows": 100,
+      "grade": "B", "label": "中等",
+      "issues": [
+        "output 仅 '答案:X' 无解析/推理过程，模型只学到选字母不学到推理",
+        "部分题目选项不完整（第100行仅4选项+断尾'细菌'应为'细菌性肝脓肿'）"
+      ],
+      "good": ["格式统一", "题目与答案匹配", "领域标签正确（医学考试）"],
+      "verdict": "可作为选择题 SFT 数据，但训练价值有限。建议补充解析字段。"
+    },
+    {
+      "test_id": "test_cmb_clin_medical_qa_kept",
+      "domain": "医疗", "preset": "medical_qa", "output_rows": 74,
+      "grade": "A", "label": "良好",
+      "issues": ["26条被reader去重/过滤（100→74），丢失率26%"],
+      "good": ["临床推理链完整（病历→诊断→依据）", "instruction/input/output 拆分合理", "语义连贯性高"],
+      "verdict": "最佳医疗训练数据，适合临床推理微调。"
+    },
+    {
+      "test_id": "test_toyhom_medical_qa_kept",
+      "domain": "医疗", "preset": "medical_qa", "output_rows": 100,
+      "grade": "C+", "label": "中等偏低",
+      "issues": [
+        "患者提问口语化+大量错别字（'发觉'→发现, '糖尿并'→糖尿病, '钢架'→大家）",
+        "医生回答语句不通顺（第51行'你这当然可糖尿病患者可以决定低糖水果'）",
+        "部分回答含模板化结尾'感谢您的进行咨询，期望我的解释对你有所帮助'"
+      ],
+      "good": ["真实在线咨询场景", "科室元信息拆入input", "回答有实质医疗内容"],
+      "verdict": "反映真实场景但文本质量参差，需清洗错别字和不通顺语句。"
+    },
+    {
+      "test_id": "test_medqa_medical_qa_kept",
+      "domain": "医疗", "preset": "medical_qa", "output_rows": 100,
+      "grade": "D", "label": "不合格",
+      "issues": [
+        "题目是 CMB-Exam 医学题重排（鳃弓、SLE），标为 [src:us;subjects:surgery] 但不是美国题",
+        "解析全部是模板 '结合题干与选项,正确答案应为首项(示例解析)'，且说'首项'但答案不一定是A",
+        "兜底数据冒充 MedQA，领域标签 src:us 虚假"
+      ],
+      "good": ["格式正确"],
+      "verdict": "兜底数据质量极差，解析为无意义模板。需下载真实 MedQA 或改进兜底逻辑。"
+    },
+    {
+      "test_id": "test_huatuo_medical_qa_kept",
+      "domain": "医疗", "preset": "medical_qa", "output_rows": 100,
+      "grade": "A-", "label": "良好",
+      "issues": ["input 为空（Huatuo 原始数据无背景信息字段）"],
+      "good": ["真实医疗QA", "问答语义连贯", "回答专业且有针对性"],
+      "verdict": "高质量真实医疗QA数据，适合微调。"
+    },
+    {
+      "test_id": "test_raw_medical_medical_cn_kept",
+      "domain": "医疗", "preset": "medical_cn", "output_rows": 1,
+      "grade": "A", "label": "良好",
+      "issues": ["仅1条构造数据"],
+      "good": ["结构化提取正确（主诉+现病史+诊断）", "instruction 任务描述清晰"],
+      "verdict": "质量良好但样本量不足。"
+    },
+    {
+      "test_id": "test_cmb_clin_medical_cn_dropped",
+      "domain": "医疗", "preset": "medical_cn", "output_rows": 4,
+      "grade": "A", "label": "良好",
+      "issues": ["74条中仅4条通过严格预设（70条缺诊断被丢弃）"],
+      "good": ["保留的4条质量高（含完整诊断+鉴别诊断）", "严格预设正确过滤"],
+      "verdict": "严格预设有效过滤，保留数据质量高。"
+    },
+    {
+      "test_id": "test_cmb_clin_bad_medical_cn_dropped",
+      "domain": "医疗", "preset": "medical_cn", "output_rows": 0,
+      "grade": "A", "label": "正确丢弃",
+      "issues": [],
+      "good": ["构造坏样本正确被丢弃"],
+      "verdict": "丢弃逻辑正确。"
+    },
+    {
+      "test_id": "test_lawbench_qa_legal_qa_kept",
+      "domain": "法律", "preset": "legal_qa", "output_rows": 100,
+      "grade": "A", "label": "良好",
+      "issues": ["部分行 input 与 output 差异极小（仅改1-2字），信息增量低"],
+      "good": ["纠错任务定义清晰", "instruction/input/output 拆分正确", "修正精准（'实施'→'事实', '苯院'→'本院'）"],
+      "verdict": "修复后质量良好，适合法律文书纠错任务微调。"
+    },
+    {
+      "test_id": "test_lawbench_qa_legal_cn_dropped",
+      "domain": "法律", "preset": "legal_cn", "output_rows": 14,
+      "grade": "B+", "label": "中等偏上",
+      "issues": ["86条被丢弃（质量分过低），保留率仅14%"],
+      "good": ["保留的14条纠错质量较高", "严格预设正确过滤低质量纠错"],
+      "verdict": "严格预设过滤激进但保留数据质量可接受。"
+    },
+    {
+      "test_id": "test_disc_law_legal_qa_kept",
+      "domain": "法律", "preset": "legal_qa", "output_rows": 100,
+      "grade": "D", "label": "不合格",
+      "issues": [
+        "输出与 test_lawbench_qa_legal_qa_kept 完全一样——disc_law fixture 是 LawBench 重排的兜底，不是真实 DISC-Law-SFT 数据",
+        "DISC-Law-SFT 应有多个法律任务类型（法律咨询/案件分析/法规问答等），但这里全是文书纠错"
+      ],
+      "good": ["单看数据质量尚可（因为是 LawBench 真实数据）"],
+      "verdict": "兜底数据冒充 DISC-Law-SFT，任务类型单一。需下载真实 DISC-Law-SFT 或修正标签。"
+    },
+    {
+      "test_id": "test_lawbench_summary_legal_qa_kept",
+      "domain": "法律", "preset": "legal_qa", "output_rows": 1,
+      "grade": "B", "label": "中等",
+      "issues": ["仅1条构造数据（article 取真实刑法条文，summary 为构造）"],
+      "good": ["法条摘要任务定义清晰", "摘要内容正确"],
+      "verdict": "质量可接受但样本量不足。"
+    },
+    {
+      "test_id": "test_raw_legal_judgment_legal_cn_kept",
+      "domain": "法律", "preset": "legal_cn", "output_rows": 1,
+      "grade": "A", "label": "良好",
+      "issues": ["仅1条数据"],
+      "good": ["判决书结构化提取正确（文书类型+案号+本院认为+判决）", "真实案例内容丰富"],
+      "verdict": "质量良好但样本量不足。"
+    },
+    {
+      "test_id": "test_raw_legal_judgment_bad_cn_dropped",
+      "domain": "法律", "preset": "legal_cn", "output_rows": 0,
+      "grade": "A", "label": "正确丢弃",
+      "issues": [],
+      "good": ["缺案号判决书正确被丢弃"],
+      "verdict": "丢弃逻辑正确。"
+    },
+    {
+      "test_id": "test_raw_legal_contract_legal_cn_kept",
+      "domain": "法律", "preset": "legal_cn", "output_rows": 1,
+      "grade": "B", "label": "中等",
+      "issues": ["仅1条构造数据"],
+      "good": ["合同信息提取正确（甲方+乙方+标的+条款）"],
+      "verdict": "质量可接受但样本量不足。"
+    },
+    {
+      "test_id": "test_fineval_mcq_finance_qa_kept",
+      "domain": "金融", "preset": "finance_qa", "output_rows": 100,
+      "grade": "F", "label": "严重不合格",
+      "issues": [
+        "题目是医学题（鳃弓、SLE、恶性高热），不是金融题！",
+        "解析全部是模板 '结合题干与选项分析可得(示例解析)'",
+        "兜底用 CMB-Exam 医学题冒充金融选择题，领域标签完全错误"
+      ],
+      "good": [],
+      "verdict": "最严重问题：医学题冒充金融题。必须修复 build_fineval 兜底逻辑或下载真实 FinEval 数据。"
+    },
+    {
+      "test_id": "test_fineval_qa_finance_qa_kept",
+      "domain": "金融", "preset": "finance_qa", "output_rows": 100,
+      "grade": "F", "label": "严重不合格",
+      "issues": [
+        "题目是 Toyhom 医疗咨询（高血压、糖尿病、癫痫），不是金融问题！",
+        "兜底用 Toyhom 医疗数据冒充金融开放问答，领域标签完全错误"
+      ],
+      "good": [],
+      "verdict": "最严重问题：医疗数据冒充金融数据。必须修复 build_fineval 兜底逻辑。"
+    },
+    {
+      "test_id": "test_fingpt_finance_qa_kept",
+      "domain": "金融", "preset": "finance_qa", "output_rows": 100,
+      "grade": "B+", "label": "中等偏上",
+      "issues": [
+        "instruction 是英文金融新闻标题，与中文金融场景不匹配",
+        "output 仅情感标签（neutral/positive/negative），任务单一"
+      ],
+      "good": ["真实 fingpt 数据", "情感标签正确", "金融新闻内容真实"],
+      "verdict": "数据真实但语言不匹配（英文→中文平台），任务单一（仅情感分类）。"
+    },
+    {
+      "test_id": "test_fingpt_finance_cn_dropped",
+      "domain": "金融", "preset": "finance_cn", "output_rows": 0,
+      "grade": "A", "label": "正确丢弃",
+      "issues": [],
+      "good": ["无数值+单位的情感分类数据正确被严格预设丢弃"],
+      "verdict": "丢弃逻辑正确。"
+    },
+    {
+      "test_id": "test_fingpt_cn_bad_dropped",
+      "domain": "金融", "preset": "finance_cn", "output_rows": 0,
+      "grade": "A", "label": "正确丢弃",
+      "issues": [],
+      "good": ["构造坏样本正确被丢弃"],
+      "verdict": "丢弃逻辑正确。"
+    },
+    {
+      "test_id": "test_finance_report_cn_kept",
+      "domain": "金融", "preset": "finance_cn", "output_rows": 1,
+      "grade": "B", "label": "中等",
+      "issues": ["仅1条构造数据"],
+      "good": ["研报指标提取正确（营收+净利+增速）"],
+      "verdict": "质量可接受但样本量不足。"
+    },
+    {
+      "test_id": "test_mmlu_cn_kept",
+      "domain": "教育", "preset": "education_cn", "output_rows": 1,
+      "grade": "D", "label": "不合格",
+      "issues": [
+        "仅1行数据",
+        "题目是'下列鸭品种中,产蛋量最高的品种是'——这是 CMMLU 农业知识题，不是 MMLU 英文多领域题",
+        "MMLU 应为英文题目，但输出中文，说明用了 CMMLU 兜底"
+      ],
+      "good": [],
+      "verdict": "兜底数据冒充 MMLU，语言和来源都不对。需下载真实 MMLU 或修正标签。"
+    },
+    {
+      "test_id": "test_cmmlu_cn_kept",
+      "domain": "教育", "preset": "education_cn", "output_rows": 4,
+      "grade": "B-", "label": "中等偏下",
+      "issues": [
+        "仅4行数据（fixture 不足）",
+        "output 用全角冒号'答案：D'，与 CMB-Exam/FinEval 半角'答案:D'不一致"
+      ],
+      "good": ["题目与答案匹配", "领域正确（教育/农业知识）"],
+      "verdict": "数据正确但样本量不足，格式不一致。"
+    },
+    {
+      "test_id": "test_educhat_education_qa_kept",
+      "domain": "教育", "preset": "education_qa", "output_rows": 1,
+      "grade": "B", "label": "中等",
+      "issues": ["仅1条构造数据（'解释光合作用的过程'）"],
+      "good": ["问答内容正确"],
+      "verdict": "质量可接受但样本量不足，非真实 EduChat 数据。"
+    },
+    {
+      "test_id": "test_educhat_education_cn_dropped",
+      "domain": "教育", "preset": "education_cn", "output_rows": 0,
+      "grade": "A", "label": "正确丢弃",
+      "issues": [],
+      "good": ["开放问答无选项/答案正确被严格预设丢弃"],
+      "verdict": "丢弃逻辑正确。"
+    },
+    {
+      "test_id": "test_educhat_cn_bad_dropped",
+      "domain": "教育", "preset": "education_cn", "output_rows": 0,
+      "grade": "A", "label": "正确丢弃",
+      "issues": [],
+      "good": ["构造坏样本正确被丢弃"],
+      "verdict": "丢弃逻辑正确。"
+    }
+  ]
+}

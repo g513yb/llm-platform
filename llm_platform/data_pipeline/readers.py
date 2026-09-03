@@ -165,7 +165,7 @@ def _csv_mcq_to_sharegpt(df, cols):
         user = q + (("\n" + opts) if opts else "")
         a = _cell(row, acol)
         ans = str(a or "").strip().upper()
-        assistant = f"答案：{ans}" if ans else "答案：见解析"
+        assistant = f"答案:{ans}" if ans else "答案:见解析"
         out.append({"messages": [{"role": "user", "content": user},
                                  {"role": "assistant", "content": assistant}],
                     "_meta": {"format": "mcq_csv"}})
@@ -272,16 +272,16 @@ def _exam_to_item(raw, base, rid) -> WorkItem:
         user += "\n" + opts
     answer_idx = raw.get("answer_idx")
     letter = str(answer_idx).strip().upper() if answer_idx else _norm_answer(raw.get("answer"))
-    asst = f"答案：{letter}" if letter else "答案：见解析"
+    asst = f"答案:{letter}" if letter else "答案:见解析"
     # MedQA：answer 是长解析文本；仅当用 answer_idx 且 answer 非单字母时追加解析
     if answer_idx:
         exp = str(raw.get("answer") or "").strip()
         if exp and not re.fullmatch(r"[A-Za-z]+", exp):
-            asst += f"\n解析：{exp}"
+            asst += f"\n解析:{exp}"
     else:
         for k in ("explanation", "Explanation", "solution", "解析"):
             if raw.get(k):
-                asst += f"\n解析：{str(raw[k]).strip()}"
+                asst += f"\n解析:{str(raw[k]).strip()}"
                 break
     return WorkItem(rid, f"{base}#{rid}",
                     [{"role": "user", "content": user}, {"role": "assistant", "content": asst}],

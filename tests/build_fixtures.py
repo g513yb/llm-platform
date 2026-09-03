@@ -225,16 +225,17 @@ def build_medqa() -> None:
     if rows:
         note(f"medqa_medical.jsonl   ← 真实 MedQA 题库（{len(rows)} 条，_downloads/medqa_drive/）")
     else:
+        # 兜底：CMB-Exam 医学题重排为 MedQA schema（同领域，标注真实来源）
         for line in (FIXTURES / "cmb_exam_medical.jsonl").read_text(encoding="utf-8").splitlines():
             if not line.strip():
                 continue
             rec = json.loads(line)
             rows.append({"question": rec["question"], "options": rec["option"],
-                         "answer_idx": rec["answer"], "answer": "结合题干与选项，正确答案应为首项（示例解析）。",
-                         "meta_info": {"src": "us", "subjects": ["surgery"]}})
+                         "answer_idx": rec["answer"], "answer": "",
+                         "meta_info": {"src": "cmb_exam", "subjects": ["medical"]}})
             if len(rows) >= SAMPLES:
                 break
-        note(f"medqa_medical.jsonl   ← 兜底：CMB-Exam 重排为 MedQA schema（{len(rows)} 条）")
+        note(f"medqa_medical.jsonl   ← 兜底：CMB-Exam 医学题重排为 MedQA schema（{len(rows)} 条，标注 src=cmb_exam）")
     write_jsonl(FIXTURES / "medqa_medical.jsonl", rows)
 
 
@@ -296,13 +297,16 @@ def build_disc_law() -> None:
     if rows:
         note(f"disc_law_legal.jsonl   ← 真实 DISC-Law-SFT（{len(rows)} 条，需 pyarrow）")
     else:
-        data = load_json(SCRATCH / "lawbench" / "data" / "zero_shot" / "2-1.json")
-        for rec in data:
-            if isinstance(rec, dict) and rec.get("question") and rec.get("answer"):
-                rows.append({"instruction": rec.get("instruction", "回答以下法律问题。"), "input": rec["question"], "output": rec["answer"]})
-                if len(rows) >= SAMPLES:
-                    break
-        note(f"disc_law_legal.jsonl   ← 兜底：LawBench 重排为 Alpaca（{len(rows)} 条）")
+        # 兜底：法律领域内构造（法律咨询/法规问答），不重排 LawBench 纠错任务
+        disc_fallback = [
+            {"instruction": "根据《中华人民共和国民法典》，回答以下法律问题。", "input": "借款合同的诉讼时效是多久？", "output": "根据《民法典》第一百八十八条，向人民法院请求保护民事权利的诉讼时效期间为三年。借款合同属于民事合同，适用三年诉讼时效，自权利人知道或应当知道权利受到损害之日起计算。"},
+            {"instruction": "根据《中华人民共和国劳动法》，回答以下法律问题。", "input": "用人单位拖欠工资，劳动者如何维权？", "output": "劳动者可以采取以下途径维权：1) 与用人单位协商；2) 向劳动行政部门投诉，由其责令限期支付；3) 申请劳动仲裁，要求支付拖欠工资及经济补偿；4) 对仲裁裁决不服的，可向人民法院起诉。"},
+            {"instruction": "根据《中华人民共和国合同法》，回答以下法律问题。", "input": "合同解除的法定条件有哪些？", "output": "根据《民法典》第五百六十三条，合同解除的法定条件包括：1) 不可抗力致使不能实现合同目的；2) 一方明确表示或以行为表明不履行主要债务；3) 一方迟延履行主要债务，经催告后在合理期限内仍未履行；4) 一方迟延履行致使不能实现合同目的；5) 法律规定的其他情形。"},
+            {"instruction": "作为法律顾问，请分析以下案例。", "input": "甲向乙借款10万元，约定一年后归还，未约定利息。一年后甲未归还，乙起诉。", "output": "分析：1) 借款合同有效，甲有还款义务；2) 自然人之间借款未约定利息的，视为无息借款，甲无需支付利息；3) 乙可起诉要求甲偿还本金10万元；4) 自约定还款期限届满之日起三年内乙有权起诉，超过诉讼时效则丧失胜诉权。"},
+            {"instruction": "根据《中华人民共和国公司法》，回答以下法律问题。", "input": "有限责任公司的股东最多可以有多少人？", "output": "根据《公司法》第二十四条，有限责任公司由五十个以下股东出资设立。因此有限责任公司股东最多为50人。超过此限度的，应当变更为股份有限公司。"},
+        ]
+        rows = disc_fallback[:SAMPLES] if SAMPLES <= len(disc_fallback) else disc_fallback
+        note(f"disc_law_legal.jsonl   ← 兜底：法律领域内构造（{len(rows)} 条，法律咨询/法规问答）")
     write_jsonl(FIXTURES / "disc_law_legal.jsonl", rows)
 
 
@@ -377,18 +381,29 @@ def build_fineval() -> None:
     if mcq_rows and qa_rows:
         note(f"fineval_mcq/qa_finance.jsonl   ← 真实 FinEval data-v2（mcq {len(mcq_rows)} / qa {len(qa_rows)} 条）")
     else:
-        for line in (FIXTURES / "cmb_exam_medical.jsonl").read_text(encoding="utf-8").splitlines():
-            if not line.strip() or len(mcq_rows) >= SAMPLES:
-                continue
-            rec = json.loads(line)
-            mcq_rows.append({"question": rec["question"], "options": rec["option"], "answer": rec["answer"],
-                             "Explanation": "结合题干与选项分析可得（示例解析）。"})
-        df = pd.read_csv(FIXTURES / "toyhom_medical.csv", encoding="gbk")
-        for _, t in df.iterrows():
-            if len(qa_rows) >= SAMPLES:
-                break
-            qa_rows.append({"question": str(t["ask"]), "answer": str(t["answer"])})
-        note(f"fineval_mcq/qa_finance.jsonl   ← 兜底：真实 CMB-Exam/Toyhom 重排为 FinEval schema（mcq {len(mcq_rows)} / qa {len(qa_rows)} 条）")
+        # 兜底：金融领域内构造，不跨领域重排（避免医学题冒充金融题）
+        fin_mcq = [
+            {"question": "市盈率(P/E)的计算公式是", "options": ["股价/每股收益", "股价/每股净资产", "净利润/营业收入", "总资产/总负债"], "answer": "A", "Explanation": "市盈率=股价/每股收益(EPS)，衡量股价相对盈利的估值水平。"},
+            {"question": "下列哪项不属于流动资产", "options": ["货币资金", "应收账款", "固定资产", "存货"], "answer": "C", "Explanation": "固定资产属于非流动资产，其余均为流动资产。"},
+            {"question": "GDP平减指数反映的是", "options": ["物价水平变动", "经济增长率", "失业率变化", "汇率变动"], "answer": "A", "Explanation": "GDP平减指数衡量名义GDP与实际GDP之比，反映整体物价水平变动。"},
+            {"question": "央行提高存款准备金率的影响是", "options": ["增加货币供给", "减少货币供给", "不影响货币供给", "增加基础货币"], "answer": "B", "Explanation": "提高准备金率减少银行可贷资金，收缩货币供给。"},
+            {"question": "下列哪种利率反映了资金的真实借贷成本", "options": ["名义利率", "实际利率", "基准利率", "同业拆借利率"], "answer": "B", "Explanation": "实际利率=名义利率-通货膨胀率，反映真实借贷成本。"},
+            {"question": "CAPM模型中β系数的含义是", "options": ["无风险收益率", "市场风险溢价", "资产相对市场的系统性风险", "资产的总风险"], "answer": "C", "Explanation": "β衡量资产收益率相对市场收益率的敏感度，即系统性风险。"},
+            {"question": "下列哪项是直接融资方式", "options": ["银行贷款", "发行债券", "信托贷款", "委托贷款"], "answer": "B", "Explanation": "发行债券是资金需求方直接向投资者融资，属于直接融资。"},
+            {"question": "巴塞尔协议III对核心一级资本充足率的最低要求是", "options": ["4%", "4.5%", "6%", "8%"], "answer": "B", "Explanation": "巴塞尔III要求核心一级资本充足率不低于4.5%。"},
+            {"question": "期权的时间价值在到期时", "options": ["达到最大", "等于内在价值", "趋于零", "保持不变"], "answer": "C", "Explanation": "期权到期时时间价值归零，期权价值等于内在价值。"},
+            {"question": "下列哪个指标衡量投资组合的系统性风险", "options": ["标准差", "β系数", "夏普比率", "Alpha"], "answer": "B", "Explanation": "β系数衡量组合相对市场的系统性风险，标准差衡量总风险。"},
+        ]
+        fin_qa = [
+            {"question": "简述货币政策三大工具。", "answer": "货币政策三大工具：公开市场操作（买卖国债调节基础货币）、存款准备金率（控制银行可贷资金规模）、再贴现率（影响银行向央行借款成本）。"},
+            {"question": "什么是流动性陷阱", "answer": "流动性陷阱指利率降至极低水平时，人们预期利率只会上升，因而宁愿持有现金而非债券，央行增加货币供给无法进一步降低利率，货币政策失效。"},
+            {"question": "解释费雪效应。", "answer": "费雪效应指名义利率约等于实际利率加预期通货膨胀率：i≈r+π^e。表明名义利率随通胀预期调整，实际利率相对稳定。"},
+            {"question": "什么是委托代理问题", "answer": "委托代理问题指代理人（如管理层）与委托人（如股东）利益不一致时，代理人可能追求自身利益而非委托人利益，产生道德风险和逆向选择。"},
+            {"question": "简述有效市场假说的三种形式。", "answer": "弱式有效（价格反映历史信息）、半强式有效（价格反映所有公开信息）、强式有效（价格反映所有信息含内幕）。信息集递增，超额收益递减。"},
+        ]
+        mcq_rows = fin_mcq[:SAMPLES] if SAMPLES <= len(fin_mcq) else fin_mcq
+        qa_rows = fin_qa[:SAMPLES] if SAMPLES <= len(fin_qa) else fin_qa
+        note(f"fineval_mcq/qa_finance.jsonl   ← 兜底：金融领域内构造（mcq {len(mcq_rows)} / qa {len(qa_rows)} 条）")
     write_jsonl(FIXTURES / "fineval_mcq_finance.jsonl", mcq_rows)
     write_jsonl(FIXTURES / "fineval_qa_finance.jsonl", qa_rows)
 
@@ -459,8 +474,11 @@ def build_edu_mcq() -> None:
                 continue
             if {"question", "a", "b", "c", "d", "answer"} <= {str(c).strip().lower() for c in mdf.columns}:
                 for _, mr in mdf.iterrows():
-                    mmlu_rows.append({"question": str(mr["question"]), "A": str(mr["A"]), "B": str(mr["B"]),
-                                      "C": str(mr["C"]), "D": str(mr["D"]), "answer": str(mr["answer"])})
+                    ans = str(mr["answer"]).strip()
+                    if ans.isdigit():
+                        ans = "ABCD"[int(ans) % 4]
+                    mmlu_rows.append({"question": str(mr["question"]), "A": str(mr["a"]), "B": str(mr["b"]),
+                                      "C": str(mr["c"]), "D": str(mr["d"]), "answer": ans})
                     if len(mmlu_rows) >= SAMPLES:
                         break
             if len(mmlu_rows) >= SAMPLES:

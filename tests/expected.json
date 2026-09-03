@@ -72,7 +72,7 @@
     },
     "tests.test_readers.TestReaders.test_mmlu_csv": {
       "expect": "pass", "category": "reader/教育", "fixture": "mmlu_education.csv", "samples": 100,
-      "rationale": "真实 MMLU 或兜底 CMMLU 重排；question/答案字母不定，reader 加 '答案：' 前缀稳定"
+      "rationale": "真实 MMLU 100 行英文多领域题；question/答案字母不定，reader 加 '答案:' 前缀稳定"
     },
     "tests.test_readers.TestReaders.test_cmmlu_csv": {
       "expect": "pass", "category": "reader/教育", "fixture": "cmmlu_education.csv", "samples": 100,
@@ -180,7 +180,7 @@
 
     "tests.test_pipeline.TestEducation.test_mmlu_cn_kept": {
       "expect": "pass", "category": "pipeline/教育", "fixture": "mmlu_education.csv", "samples": 100,
-      "rationale": "严格 education_cn 保留 MMLU 100 条；断言 total>=1, dropped==0, kept>=1, output 以'答案'开头, input 为空"
+      "rationale": "严格 education_cn 保留 MMLU 真实英文题；部分可能被丢弃，断言 total>=1, kept>=1, output 以'答案'开头, input 为空"
     },
     "tests.test_pipeline.TestEducation.test_cmmlu_cn_kept": {
       "expect": "pass", "category": "pipeline/教育", "fixture": "cmmlu_education.csv", "samples": 100,
