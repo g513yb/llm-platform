@@ -277,11 +277,15 @@ def build_lawbench_qa() -> None:
     rows = []
     for rec in data:
         if isinstance(rec, dict) and rec.get("question") and rec.get("answer"):
-            rows.append({"question": rec["question"], "answer": rec["answer"]})
+            rows.append({
+                "instruction": rec.get("instruction", "回答以下法律问题。"),
+                "input": rec["question"],
+                "output": rec["answer"],
+            })
             if len(rows) >= SAMPLES:
                 break
     write_jsonl(FIXTURES / "lawbench_qa_legal.jsonl", rows)
-    note(f"lawbench_qa_legal.jsonl   ← 真实 LawBench zero_shot/2-1（{len(rows)} 条）")
+    note(f"lawbench_qa_legal.jsonl   ← 真实 LawBench zero_shot/2-1（{len(rows)} 条，含 instruction 任务描述）")
 
 
 # ============================================================ 9. DISC-Law-SFT（真实优先：HF parquet Alpaca；兜底：LawBench 重排）

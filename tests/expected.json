@@ -36,7 +36,7 @@
     },
     "tests.test_readers.TestReaders.test_lawbench_qa": {
       "expect": "pass", "category": "reader/法律", "fixture": "lawbench_qa_legal.jsonl", "samples": 100,
-      "rationale": "LawBench zero_shot/2-1 真实问答；instruction/answer 内容不定，仅断言结构"
+      "rationale": "LawBench zero_shot/2-1 真实法律文书纠错（Alpaca：instruction=纠错任务描述, input=待纠错句子, output=纠正结果）；仅断言结构"
     },
     "tests.test_readers.TestReaders.test_lawbench_summary": {
       "expect": "pass", "category": "reader/法律", "fixture": "lawbench_summary_legal.jsonl", "samples": 1,
@@ -126,7 +126,7 @@
 
     "tests.test_pipeline.TestLegal.test_lawbench_qa_legal_qa_kept": {
       "expect": "pass", "category": "pipeline/法律", "fixture": "lawbench_qa_legal.jsonl", "samples": 100,
-      "rationale": "宽松 legal_qa 保留 LawBench-QA 100 条；断言 kept>=1, input 为空，output 内容不定"
+      "rationale": "宽松 legal_qa 保留 LawBench 纠错 100 条；Alpaca 格式 input 非空（待纠错句子），断言 kept>=1, input 非空"
     },
     "tests.test_pipeline.TestLegal.test_lawbench_qa_legal_cn_dropped": {
       "expect": "pass", "category": "pipeline/法律", "fixture": "lawbench_qa_legal.jsonl", "samples": 100,

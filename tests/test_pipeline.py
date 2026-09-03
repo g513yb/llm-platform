@@ -91,8 +91,8 @@ class TestLegal(_Base):
     domain = "法律"
 
     def test_lawbench_qa_legal_qa_kept(self):
-        # 真实 LawBench QA；output 内容不定，仅断言 kept 与结构
-        self._assert_rows(self._run("lawbench_qa_legal.jsonl", "legal_qa"), input_nonempty=False)
+        # 真实 LawBench QA（Alpaca：instruction=纠错任务描述, input=待纠错句子, output=纠正结果）
+        self._assert_rows(self._run("lawbench_qa_legal.jsonl", "legal_qa"), input_nonempty=True)
 
     def test_lawbench_qa_legal_cn_dropped(self):
         # 纯问答无文书结构 → legal_cn 质量分过低丢弃部分；100 条样本中部分可能过质量分
