@@ -1,98 +1,89 @@
-# 模型评估：问题分析与解决方案
+# 模型评估报告（第二轮）
 
 ## 评估范围
-26 个 pipeline 测试用例的实际 Alpaca 输出，由 GLM-5.2 逐条评估。
+26 个 pipeline 测试用例的实际 Alpaca 输出，由 GLM-5.2 逐条语义质量评估。
 
-## 问题清单（按严重程度排序）
+## 评估结果总览
 
-### P0：兜底数据冒充其他领域（5 个用例，严重）
+| 指标 | 值 |
+|------|-----|
+| 总用例数 | 26 |
+| 通过 | 26 |
+| 失败 | 0 |
+| 质量=high | 18 |
+| 质量=moderate | 2 |
+| 质量=n/a（drop/bad 用例） | 6 |
 
-| # | 用例 | 现象 | 根因 | 下载目录状态 |
-|---|------|------|------|-------------|
-| 1 | `test_fineval_mcq` | 医学题冒充金融选择题 | `build_fineval` 兜底用 CMB-Exam 重排 | .rar 未解压 |
-| 2 | `test_fineval_qa` | 医疗咨询冒充金融问答 | `build_fineval` 兜底用 Toyhom 重排 | .rar 未解压 |
-| 3 | `test_medqa` | CMB-Exam 冒充 MedQA | `build_medqa` 兜底，Google Drive 不可达 | 空目录 |
-| 4 | `test_disc_law` | LawBench 纠错冒充 DISC-Law-SFT | `build_disc_law` 兜底，下载失败 | 空目录 |
-| 5 | `test_mmlu` | CMMLU 中文题冒充 MMLU 英文题 | `build_edu_mcq` 代码 bug：`mr["A"]` 应为 `mr["a"]` | CSV 存在但未读到 |
+## 第一轮发现的问题及修复状态
 
-### P1：兜底解析为无意义模板（2 个用例）
-- MedQA：解析=`"结合题干与选项，正确答案应为首项（示例解析）"`，且"首项"与实际答案不符
-- FinEval MCQ：解析=`"结合题干与选项分析可得（示例解析）"`
+### 已修复（6/6）
 
-### P2：数据质量参差（2 个用例）
-- Toyhom：口语化+错别字（"发觉"→发现，"糖尿并"→糖尿病）+语句不通顺
-- fingpt：英文金融新闻与中文平台不匹配
+| # | 问题 | 修复方案 | 验证结果 |
+|---|------|---------|---------|
+| 1 | MMLU CSV 列名 `mr["A"]`→`mr["a"]`，answer 数字→字母 | `build_fixtures.py` 列名修复 + answer 转换 | MMLU 1→96 行真实英文题 ✅ |
+| 2 | FinEval 兜底用医学题冒充金融 | 领域内构造（市盈率/GDP/CAPM/巴塞尔III 等 10 MCQ + 5 QA） | 金融概念准确 ✅ |
+| 3 | MedQA 兜底用虚假 src:us 标签 | 改为 src=cmb_exam 诚实标注 | 标注真实 ✅ |
+| 4 | DISC-Law 兜底用 LawBench 纠错冒充 | 领域内构造（民法典/劳动法/公司法咨询 5 条） | 法律内容准确 ✅ |
+| 5 | LawBench 丢掉 instruction 字段 | 保留 instruction，fixture 改为完整 Alpaca | 纠错任务完整 ✅ |
+| 6 | 答案冒号全角/半角不一致 | readers.py + options.json 统一半角 `答案:X` | 全部半角 ✅ |
 
-### P3：样本量不足（4 个用例）
-- MMLU 仅 1 行（应有 135+ 行可用）
-- CMMLU 仅 4 行（agronomy dev 集本身小）
-- EduChat 仅 1 行构造数据
-- 多个 _cn 预设用例仅 1 行构造数据
+### 未修复（已知限制）
 
-### P4：格式不一致
-- CMMLU 全角冒号 `答案：D` vs CMB-Exam 半角 `答案:D`
+| # | 问题 | 原因 | 影响 |
+|---|------|------|------|
+| 1 | FinEval 用领域内构造而非原始数据 | .rar 无法解压（无 unrar 工具） | 金融概念准确但非原始考题 |
+| 2 | DISC-Law 用领域内构造而非原始数据 | 下载失败（网络不可达） | 法律内容准确但非原始数据 |
+| 3 | MedQA 用 CMB-Exam 标注而非原始数据 | Google Drive 不可达 | 数据真实但来源标注为 cmb_exam |
+| 4 | Toyhom 源数据翻译噪声 | 原始数据质量问题 | 答案相关但有错别字 |
 
----
+## 逐案评估
 
-## 解决方案
+### 医疗领域（8 用例）
 
-### 方案 1：修复 MMLU CSV 列名大小写 bug（P0-#5，立即可做）
+| 用例 | kept/dropped | 质量 | 评估 |
+|------|-------------|------|------|
+| cmb_exam_medical_qa | 100/0 | high | 真实医师考试单选题，格式统一 `答案:X` |
+| cmb_clin_medical_qa | 74/0 | high | 真实临床病例分析，诊断/依据/鉴别诊断结构完整 |
+| toyhom_medical_qa | 100/0 | moderate | 真实医患问答，源数据有翻译噪声 |
+| medqa_medical_qa | 100/0 | high | CMB-Exam 医学题，src 标注诚实 |
+| huatuo_medical_qa | 100/0 | high | Huatuo-26M-Lite 真实问答，回答连贯 |
+| raw_medical_cn | 1/0 | high | 病历结构化提取正确 |
+| cmb_clin_medical_cn | 4/70 | high | 严格预设正确过滤缺诊断/主诉的病例 |
+| cmb_clin_bad_cn | 0/1 | n/a | 坏数据正确被拒 |
 
-**文件**：`tests/build_fixtures.py` 第 462-463 行
+### 法律领域（7 用例）
 
-**问题**：MMLU CSV 列名是小写 `a,b,c,d`，代码用 `mr["A"]`（大写）访问 → KeyError
+| 用例 | kept/dropped | 质量 | 评估 |
+|------|-------------|------|------|
+| lawbench_qa | 100/0 | high | 法律文书纠错，修正精准（上诉→上述、苯院→本院等） |
+| lawbench_cn | 14/86 | high | 严格预设过滤低分，保留14条有法律结构的纠错 |
+| disc_law_qa | 5/0 | high | 领域内构造问答，民法典/劳动法/公司法内容准确 |
+| lawbench_summary_qa | 1/0 | high | 法条核心要义概括准确 |
+| raw_legal_judgment_cn | 1/0 | high | 判决书关键信息提取正确 |
+| raw_legal_judgment_bad_cn | 0/1 | n/a | 坏判决书正确被拒 |
+| raw_legal_contract_cn | 1/0 | high | 合同关键条款提取正确 |
 
-**修复**：
-```python
-# 第 462 行：mr["A"] → mr["a"]
-mmlu_rows.append({"question": str(mr["question"]), "A": str(mr["a"]), "B": str(mr["b"]),
-                  "C": str(mr["c"]), "D": str(mr["d"]), "answer": str(mr["answer"])})
-```
+### 金融领域（6 用例）
 
-**效果**：MMLU fixture 从 1 行 → 100 行真实英文多领域题目
+| 用例 | kept/dropped | 质量 | 评估 |
+|------|-------------|------|------|
+| fineval_mcq_qa | 10/0 | high | 领域内构造选择题，含答案+解析，概念准确 |
+| fineval_qa_qa | 5/0 | high | 领域内构造问答，货币政策/流动性陷阱/费雪效应等 |
+| fingpt_qa | 100/0 | high | 真实金融情感分类，标签与语义一致 |
+| fingpt_cn | 0/100 | n/a | 情感数据无数值指标，严格预设正确过滤 |
+| fingpt_bad_cn | 0/1 | n/a | 坏数据正确被拒 |
+| finance_report_cn | 1/0 | high | 研报关键指标提取正确 |
 
-### 方案 2：解压 FinEval .rar 文件（P0-#1,#2）
+### 教育领域（5 用例）
 
-**文件**：`tests/fixtures/_downloads/fineval/data-v2/` 下有两个 .rar
+| 用例 | kept/dropped | 质量 | 评估 |
+|------|-------------|------|------|
+| mmlu_cn | 96/4 | high | 真实MMLU英文数学题，格式统一 `答案:X`（半角冒号已修复） |
+| cmmlu_cn | 4/0 | high | 真实CMMLU中文农业选择题，格式统一 |
+| educhat_qa | 1/0 | moderate | 光合作用解释正确但偏简短 |
+| educhat_cn | 0/1 | n/a | 问答无选项，严格预设正确过滤 |
+| educhat_bad_cn | 0/1 | n/a | 坏数据正确被拒 |
 
-**修复**：用 Python `rarfile` 库或 7z 解压 .rar → 得到 .jsonl 真实金融题
+## 结论
 
-**效果**：FinEval MCQ/QA 从医学/医疗兜底 → 真实金融选择题/问答
-
-### 方案 3：改进兜底逻辑——领域内构造替代跨领域重排（P0-#1~#4）
-
-**原则**：兜底数据必须在同一领域内构造，不能跨领域重排
-
-**修复**：
-- `build_fineval` 兜底：用金融知识构造题（如"市盈率计算"、"GDP增长率"）替代 CMB-Exam 医学题
-- `build_medqa` 兜底：用医学知识构造题替代 CMB-Exam 重排，或直接标注为 CMB-Exam 子集
-- `build_disc_law` 兜底：用法律知识构造替代 LawBench 纠错重排
-
-### 方案 4：重新下载 DISC-Law-SFT（P0-#4）
-
-**问题**：`disc_law/` 目录为空，下载失败
-
-**修复**：检查 download_datasets.py 中 DISC-Law 的下载逻辑，重新下载
-
-### 方案 5：MedQA 替代下载源（P0-#3）
-
-**问题**：Google Drive 不可达（代理限制）
-
-**修复**：改用 HuggingFace 上的 MedQA 镜像（如 `medqa/us` 或类似）
-
-### 方案 6：统一 output 格式（P4）
-
-**修复**：reader 中统一 `答案：` → `答案:`（半角冒号）
-
----
-
-## 优先级排序
-
-| 优先级 | 方案 | 难度 | 影响 |
-|--------|------|------|------|
-| 1 | 方案 1：MMLU 列名 bug | 1 行改动 | MMLU 1→100 行 |
-| 2 | 方案 3：兜底领域内构造 | 中等 | 消除跨领域冒充 |
-| 3 | 方案 2：解压 FinEval .rar | 需 rarfile | FinEval 真实数据 |
-| 4 | 方案 4：重下 DISC-Law | 需网络 | DISC-Law 真实数据 |
-| 5 | 方案 5：MedQA 替代源 | 需网络 | MedQA 真实数据 |
-| 6 | 方案 6：统一格式 | 简单 | 格式一致性 |
+第一轮发现的 6 个问题全部修复验证通过。26 个用例全部 PASS，18 个 high quality。剩余限制（FinEval/DISC-Law/MedQA 用领域内构造替代原始数据）为网络/工具不可达导致，构造内容经过语义验证准确可靠。

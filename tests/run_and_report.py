@@ -165,6 +165,56 @@ def _fmt_ms(ms: float) -> str:
     return f"{ms:.0f} ms" if ms < 1000 else f"{ms / 1000:.2f} s"
 
 
+def _load_model_eval() -> list[dict] | None:
+    p = ROOT / "tests" / "eval_result.json"
+    if p.exists():
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+    return None
+
+
+def _model_eval_section(ev: list[dict]) -> str:
+    total = len(ev)
+    passed = sum(1 for e in ev if e.get("verdict") == "pass")
+    high = sum(1 for e in ev if e.get("quality") == "high")
+    moderate = sum(1 for e in ev if e.get("quality") == "moderate")
+    na = total - passed - sum(1 for e in ev if e.get("verdict") not in ("pass", "fail"))
+    color = "#16a34a" if passed == total else "#dc2626"
+    cards = [
+        ("总用例", total, "#0f172a"),
+        ("通过", passed, "#16a34a"),
+        ("高质量", high, "#16a34a"),
+        ("中等", moderate, "#d97706"),
+    ]
+    card_html = "".join(
+        f'<div class="card"><div class="num" style="color:{c}">{v}</div><div class="label">{k}</div></div>'
+        for k, v, c in cards
+    )
+    rows = ""
+    qc = {"high": "#16a34a", "moderate": "#d97706", "low": "#dc2626", "n/a": "#64748b"}
+    for e in ev:
+        q = e.get("quality", "n/a")
+        qcolor = qc.get(q, "#64748b")
+        issues = ", ".join(e.get("issues", [])) or "<span class='muted'>无</span>"
+        rows += (
+            f"<tr><td>{_badge(e.get('verdict',''))}</td>"
+            f"<td class='mono'>{html.escape(e.get('test_id',''))}</td>"
+            f"<td>{html.escape(e.get('domain',''))}</td>"
+            f"<td class='num'>{e.get('kept',0)}/{e.get('dropped',0)}</td>"
+            f"<td><span class='badge' style='background:{qcolor}'>{html.escape(q)}</span></td>"
+            f"<td>{html.escape(e.get('summary',''))}</td>"
+            f"<td><details><summary>问题</summary>{html.escape(issues)}</details></td></tr>"
+        )
+    return (
+        f'<h2 style="color:{color}">模型语义质量评估 · {passed}/{total} 通过</h2>'
+        f'<div class="cards">{card_html}</div>'
+        f'<table><tr><th>评估</th><th>用例</th><th>领域</th><th class="num">kept/drop</th>'
+        f'<th>质量</th><th>评估摘要</th><th>问题</th></tr>{rows}</table>'
+    )
+
+
 def render_html(meta: dict, items: list[dict], evaluation: dict | None = None) -> str:
     n = meta["total"]
     rate = (meta["passed"] / n * 100) if n else 100.0
@@ -221,6 +271,10 @@ def render_html(meta: dict, items: list[dict], evaluation: dict | None = None) -
     )
 
     # 预期评估区块
+    # 模型语义质量评估区块
+    model_eval = _load_model_eval()
+    model_eval_html = _model_eval_section(model_eval) if model_eval else ""
+
     eval_section = ""
     if evaluation:
         ev = evaluation
@@ -324,6 +378,7 @@ def render_html(meta: dict, items: list[dict], evaluation: dict | None = None) -
   <div class="rate-bar"><span style="width:{rate:.1f}%;background:{bar_color}"></span></div>
   <div style="color:{bar_color};font-size:13px;font-weight:600">通过率 {rate:.1f}%</div>
   {eval_section}
+  {model_eval_html}
   <h2>按测试类</h2>
   <div class="cls-grid">{''.join(class_rows)}</div>
   <h2>用例明细</h2>
