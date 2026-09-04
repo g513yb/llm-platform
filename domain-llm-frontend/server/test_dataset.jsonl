@@ -1,0 +1,8 @@
+{"instruction":"你好","output":"你好，我是领域智能助手，很高兴为你服务。"}
+{"instruction":"请介绍一下自己","output":"我是一个基于 Qwen2.5 微调的领域语言模型。"}
+{"instruction":"1+1等于几","output":"1+1=2。"}
+{"instruction":"用一句话说明什么是微调","output":"微调是在已有预训练模型基础上，用领域数据继续训练以适配特定任务。"}
+{"instruction":"谢谢","output":"不客气，还有其他问题可以继续问我。"}
+{"instruction":"今天天气怎样","output":"抱歉，我无法获取实时天气信息。"}
+{"instruction":"你会做什么","output":"我可以回答领域相关问题、进行文本生成与知识问答。"}
+{"instruction":"解释一下 LoRA","output":"LoRA 通过低秩矩阵分解冻结主干、只训练少量适配器参数，显著降低显存与算力需求。"}

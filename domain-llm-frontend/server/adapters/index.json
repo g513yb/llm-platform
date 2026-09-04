@@ -1,0 +1,14 @@
+[
+  {
+    "id": "tk-442b5178",
+    "name": "MEDICAL-LoRA-r16-e3",
+    "domain": "医疗",
+    "adapter_path": "D:\\domain-llm-frontend\\server\\adapters\\tk-442b5178",
+    "loss": 0.8121,
+    "samples": 315,
+    "rank": 16,
+    "lr": "2e-4",
+    "epochs": 3,
+    "created_at": "2026-09-04T14:39:32"
+  }
+]
