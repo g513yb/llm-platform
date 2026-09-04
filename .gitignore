@@ -32,3 +32,7 @@ frontend/package-lock.json
 frontend/tsconfig.tsbuildinfo
 frontend/dev-server.log
 frontend/dev-server.err.log
+frontend/.vite/
+
+# 后端运行时上传目录（training.py 启动时 makedirs 自动创建）
+server/datasets/
