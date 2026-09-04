@@ -40,10 +40,10 @@
     "output_rows": 100,
     "drop_reasons": [],
     "verdict": "pass",
-    "quality": "moderate",
-    "summary": "真实医患问答（多科室合并），源数据有翻译噪声",
+    "quality": "high",
+    "summary": "真实医患问答（跨科室轮询23科室），已修复明显翻译错误（心里因素→心理因素、股份骨折→骨盆骨折）",
     "issues": [
-      "源数据翻译噪声"
+      "源数据残留少量翻译变体（发觉/锻练等），属Toyhom数据集固有特征"
     ]
   },
   {

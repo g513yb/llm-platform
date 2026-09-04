@@ -188,27 +188,54 @@ def _read_any(path: Path) -> pd.DataFrame:
 
 
 def build_toyhom() -> None:
-    # 合并多科室 CSV（内科、男科、妇产科、肿瘤科、儿科、外科），轮询直到凑够 SAMPLES 条
+    # 合并多科室 CSV（内科、男科、妇产科、肿瘤科、儿科、外科），跨科室轮询直到凑够 SAMPLES 条
     data_root = SCRATCH / "toyhom" / "Data_数据"
     rows = []
     dept_dirs = sorted([d for d in data_root.iterdir() if d.is_dir()]) if data_root.is_dir() else []
+    dept_iters = []
     for dept_dir in dept_dirs:
+        dept_rows = []
         for csv in sorted(dept_dir.glob("*.csv"), key=lambda p: p.stat().st_size):
             try:
                 df = _read_any(csv)
             except (ValueError, OSError):
                 continue
             for _, row in df.iterrows():
-                rows.append(row.to_dict())
+                dept_rows.append(row.to_dict())
+        if dept_rows:
+            dept_iters.append(iter(dept_rows))
+    while len(rows) < SAMPLES and dept_iters:
+        next_round = []
+        for it in dept_iters:
+            try:
+                rows.append(next(it))
                 if len(rows) >= SAMPLES:
                     break
-            if len(rows) >= SAMPLES:
-                break
-        if len(rows) >= SAMPLES:
-            break
+            except StopIteration:
+                continue
+            next_round.append(it)
+        dept_iters = next_round
+    _fix_toyhom_noise(rows)
     (FIXTURES / "toyhom_medical.csv").parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(FIXTURES / "toyhom_medical.csv", index=False, encoding="gbk")
-    note(f"toyhom_medical.csv   ← 真实 Toyhom 多科室（{len(rows)} 条，GBK）")
+    note(f"toyhom_medical.csv   ← 真实 Toyhom 多科室轮询（{len(rows)} 条，GBK）")
+
+
+_TOYHOM_NOISE_FIXES = {
+    "心里因素": "心理因素",
+    "股份骨折": "骨盆骨折",
+}
+
+
+def _fix_toyhom_noise(rows: list[dict]) -> None:
+    for row in rows:
+        for k, v in row.items():
+            if not isinstance(v, str):
+                continue
+            for bad, good in _TOYHOM_NOISE_FIXES.items():
+                if bad in v:
+                    row[k] = v.replace(bad, good)
+                    v = row[k]
 
 
 # ============================================================ 6. MedQA（真实优先：Drive 题库；兜底：CMB-Exam 重排）
