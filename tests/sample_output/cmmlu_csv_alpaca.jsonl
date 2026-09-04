@@ -1,4 +1,0 @@
-{"instruction": "下列鸭品种中,产蛋量最高的品种是\nA. 高邮鸭\nB. 北京鸭\nC. 樱桃谷鸭\nD. 绍鸭", "input": "", "output": "答案：D", "source": "cmmlu_education.csv#0"}
-{"instruction": "常见家畜中输精管不形成输精管壶腹的是\nA. 马\nB. 猪\nC. 牛\nD. 羊", "input": "", "output": "答案：B", "source": "cmmlu_education.csv#1"}
-{"instruction": "牛的发情周期平均为\nA. 16~17天\nB. 21天\nC. 28天\nD. 19~20天", "input": "", "output": "答案：B", "source": "cmmlu_education.csv#2"}
-{"instruction": "羊胴体中,肉质较好的部位是\nA. 胸下肉\nB. 肩胛肉\nC. 后腿肉\nD. 小腿肉", "input": "", "output": "答案：C", "source": "cmmlu_education.csv#3"}

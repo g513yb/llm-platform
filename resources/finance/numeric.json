@@ -1,9 +1,0 @@
-{
-  "normalize": [
-    {"pattern":"％","replacement":"%"},
-    {"pattern":"[\\uFF0D\\u2013\\u2014]","replacement":"-"},
-    {"pattern":"(\\d)(?=,{1}\\d{3}(?:,\\d{3})*(?![,\\d]))","replacement":"\\1"}
-  ],
-  "preserve_terms": ["同比","环比","QoQ","YoY","EPS","PE","PB","ROE","BP","营收","净利","季报","年报","中报"],
-  "kept_patterns": ["[A-Z]{2,5}\\.(?:US|HK|SH|SZ)","\\d{4}年?(?:第?[一二三四]季度|年报|中报)","20\\d{2}[-/.]\\d{1,2}[-/.]\\d{1,2}"]
-}

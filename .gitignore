@@ -7,6 +7,7 @@ __pycache__/
 *.log
 .DS_Store
 .claude/
+.pytest_cache/
 
 # 数据处理生成产物（可能含真实数据，不入库）
 data/

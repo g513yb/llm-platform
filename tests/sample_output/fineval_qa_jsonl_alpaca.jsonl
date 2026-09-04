@@ -1,5 +1,0 @@
-{"instruction": "简述货币政策三大工具。", "input": "", "output": "货币政策三大工具:公开市场操作(买卖国债调节基础货币)、存款准备金率(控制银行可贷资金规模)、再贴现率(影响银行向央行借款成本)。", "source": "fineval_qa_finance.jsonl#0"}
-{"instruction": "什么是流动性陷阱", "input": "", "output": "流动性陷阱指利率降至极低水平时,人们预期利率只会上升,因而宁愿持有现金而非债券,央行增加货币供给无法进一步降低利率,货币政策失效。", "source": "fineval_qa_finance.jsonl#1"}
-{"instruction": "解释费雪效应。", "input": "", "output": "费雪效应指名义利率约等于实际利率加预期通货膨胀率:i≈r+π^e。表明名义利率随通胀预期调整,实际利率相对稳定。", "source": "fineval_qa_finance.jsonl#2"}
-{"instruction": "什么是委托代理问题", "input": "", "output": "委托代理问题指代理人(如管理层)与委托人(如股东)利益不一致时,代理人可能追求自身利益而非委托人利益,产生道德风险和逆向选择。", "source": "fineval_qa_finance.jsonl#3"}
-{"instruction": "简述有效市场假说的三种形式。", "input": "", "output": "弱式有效(价格反映历史信息)、半强式有效(价格反映所有公开信息)、强式有效(价格反映所有信息含内幕)。信息集递增,超额收益递减。", "source": "fineval_qa_finance.jsonl#4"}

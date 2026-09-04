@@ -6,8 +6,7 @@ from pathlib import Path
 
 # 项目根目录
 PROJECT_ROOT = Path(__file__).resolve().parent
-DATA_DIR = PROJECT_ROOT / "data"          # 数据处理产物：sharegpt.jsonl/.json + config.json
-RESOURCE_DIR = PROJECT_ROOT / "resources" # 领域预设资源（知识即数据）
+DATA_DIR = PROJECT_ROOT / "data"          # 数据处理产物：alpaca jsonl
 
 # —— 基座模型 ——
 # 可用环境变量 MODEL_NAME 覆盖，默认用 HuggingFace repo id（任意机器可下载）。
@@ -33,7 +32,7 @@ GENERATION = dict(
 # —— 应用 ——
 APP_TITLE = "多域 LLM 微调与评测平台"
 DEFAULT_DEVICE_MAP = "auto"
-OUTPUT_FORMAT = "alpaca"   # 训练数据输出格式："alpaca"(instruction/input/output, 默认) | "sharegpt"(messages)
+
 
 # —— 领域注册表：(标签, 描述) ——
 DOMAINS = [

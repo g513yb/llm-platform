@@ -1,132 +1,336 @@
-"""reader 级测试：对每个真实/重排数据源 fixture 跑 read_inputs，断言归一化结构。
+"""验证所有 SCHEMAS 中支持的数据集都能被正确识别。
 
-只做结构化断言（不写盘、不涉及 keep/drop）；断言按冻结后的真实 fixture 内容校写。
+两类测试：
+1. 单元测试（TestParse*）：用合成数据测试每个 _parse_* 函数的解析逻辑
+2. 集成测试（test_real_data_*）：用 tests/fixtures/_downloads/ 下的真实数据测试 inspect/run_pipeline
+3. 合成 fixture 测试（TestSyntheticData）：用 tests/fixtures/synthetic/ 下的合成数据测试 MedQA/CMMLU
+
+运行：pytest tests/test_readers.py -v
 """
 from __future__ import annotations
 
-import unittest
+import json
+import sys
+from pathlib import Path
 
-from tests._helpers import reader
+import pytest
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from llm_platform.data_pipeline import SUPPORTED, inspect, run_pipeline, SCHEMAS
+from llm_platform.data_pipeline.readers import (
+    _parse_clin, _parse_mcq, _parse_qa, _to_messages,
+)
+
+SYNTH = Path(__file__).parent / "fixtures" / "synthetic"
+DL = Path(__file__).parent / "fixtures" / "_downloads"
 
 
-class TestReaders(unittest.TestCase):
-    """归一化不变量：至少一条、首 user 尾 assistant、内容非空；再按各源特征标记断言。"""
+# ========== 单元测试：_parse_mcq ==========
 
-    def _assert_pair(self, items, user_marker=None, asst_marker=None, asst_start=None, asst_end=None):
-        self.assertGreater(len(items), 0, "rows_loaded 应为 0")
-        for it in items:
-            msgs = it.messages
-            self.assertGreaterEqual(len(msgs), 2, "至少应有 user+assistant")
-            self.assertEqual(msgs[0]["role"], "user")
-            self.assertEqual(msgs[-1]["role"], "assistant")
-            for m in msgs:
-                self.assertTrue(m["content"].strip(), "content 不应为空")
-            user = msgs[0]["content"]
-            asst = msgs[-1]["content"]
-            if user_marker:
-                self.assertIn(user_marker, user)
-            if asst_marker:
-                self.assertIn(asst_marker, asst)
-            if asst_start:
-                self.assertTrue(asst.startswith(asst_start), f"{asst[:40]!r} 应以 {asst_start!r} 开头")
-            if asst_end:
-                self.assertTrue(asst.endswith(asst_end), f"{asst[:40]!r} 应以 {asst_end!r} 结尾")
+class TestParseMcq:
+    """选择题解析：CMB-Exam / MedQA / CMMLU-MMLU / FinEval 四种 schema。"""
 
-    # ---- 医疗 ----
-    def test_cmb_exam(self):
-        self._assert_pair(reader("cmb_exam_medical.jsonl"),
-                          user_marker="单选题：", asst_start="答案")
+    def test_cmb_exam_option_dict(self):
+        rec = {
+            "question": "下列哪种药物是利尿剂？",
+            "option": {"A": "呋塞米", "B": "美托洛尔", "C": "硝苯地平", "D": "卡托普利"},
+            "answer": "A",
+        }
+        parsed = _parse_mcq(rec)
+        assert parsed is not None
+        q, opts, letter, expl = parsed
+        assert "利尿剂" in q
+        assert opts == {"A": "呋塞米", "B": "美托洛尔", "C": "硝苯地平", "D": "卡托普利"}
+        assert letter == "A"
+        assert expl == ""
 
-    def test_cmb_clin(self):
-        # 真实 CMB-Clin：QA_pairs 用 answer 键（reader 已做 solution/answer 兼容）
-        self._assert_pair(reader("cmb_clin_medical.jsonl"))
+    def test_medqa_options_dict_with_explanation(self):
+        rec = {
+            "question": "急性心梗最早期心电图改变？",
+            "options": {"A": "Q波", "B": "ST抬高", "C": "T波倒置", "D": "ST压低"},
+            "answer_idx": "B",
+            "answer": "ST段抬高是急性心肌梗死最早期的心电图改变。",
+        }
+        parsed = _parse_mcq(rec)
+        assert parsed is not None
+        q, opts, letter, expl = parsed
+        assert letter == "B"
+        assert "ST段抬高" in expl
 
-    def test_cmb_clin_bad_normalizes(self):
-        # 构造坏样本也能被正常归一化（丢弃发生在预设级，而非 reader）
-        self._assert_pair(reader("cmb_clin_medical_cn_bad.jsonl"))
+    def test_cmmlu_single_letter_fields(self):
+        rec = {
+            "question": "下列哪项不是高血压危险因素？",
+            "A": "吸烟", "B": "高血脂", "C": "规律运动", "D": "男性年龄>55岁",
+            "answer": "C",
+        }
+        parsed = _parse_mcq(rec)
+        assert parsed is not None
+        q, opts, letter, expl = parsed
+        assert opts["C"] == "规律运动"
+        assert letter == "C"
 
-    def test_toyhom_gbk(self):
-        # 真实 Toyhom GBK CSV；科室前缀稳定，answer 内容不定，仅结构+前缀断言
-        self._assert_pair(reader("toyhom_medical.csv"), user_marker="科室：")
+    def test_fineval_with_explanation(self):
+        rec = {
+            "id": 1,
+            "question": "国际清偿力不包括一国的____。",
+            "A": "自有储备", "B": "借入储备", "C": "在IMF的储备头寸", "D": "特别提款权",
+            "answer": "B",
+            "explanation": "国际清偿力=自有储备+借入储备。",
+        }
+        parsed = _parse_mcq(rec)
+        assert parsed is not None
+        q, opts, letter, expl = parsed
+        assert letter == "B"
+        assert "国际清偿力" in expl
 
-    @unittest.skip("MedQA Google Drive 不可达，当前用 CMB-Exam 重排非原始数据")
-    def test_medqa(self):
-        # 真实优先（Drive 题库）或兜底（CMB-Exam 重排）；reader 加 "题："/"答案：" 前缀稳定
-        self._assert_pair(reader("medqa_medical.jsonl"),
-                          user_marker="题：", asst_start="答案")
+    def test_no_question_returns_none(self):
+        assert _parse_mcq({"A": "x", "B": "y", "answer": "A"}) is None
+
+    def test_no_options_returns_none(self):
+        assert _parse_mcq({"question": "test", "answer": "A"}) is None
+
+    def test_no_valid_answer_returns_none(self):
+        rec = {"question": "test", "option": {"A": "x", "B": "y"}, "answer": "Z"}
+        assert _parse_mcq(rec) is None
+
+    def test_to_messages_format(self):
+        msgs = _to_messages("问题", {"A": "选项A", "B": "选项B"}, "A", "解析说明")
+        assert msgs[0]["role"] == "user"
+        assert "问题" in msgs[0]["content"]
+        assert "A. 选项A" in msgs[0]["content"]
+        assert msgs[1]["role"] == "assistant"
+        assert "A. 选项A" in msgs[1]["content"]
+        assert "解析：解析说明" in msgs[1]["content"]
+
+
+# ========== 单元测试：_parse_clin ==========
+
+class TestParseClin:
+    """病例问答解析：CMB-Clin schema。"""
+
+    def test_basic_clin(self):
+        rec = {
+            "id": 1, "title": "高血压病例",
+            "description": "患者男，55岁，血压160/100mmHg",
+            "QA_pairs": [
+                {"question": "该患者的诊断？", "answer": "高血压2级"},
+                {"question": "首选药物？", "answer": "ACEI类"},
+            ],
+        }
+        result = _parse_clin(rec)
+        assert len(result) == 2
+        assert result[0][1]["content"] == "高血压2级"
+        assert "病历" in result[0][0]["content"]
+
+    def test_solution_fallback(self):
+        rec = {"description": "病例", "QA_pairs": [{"question": "q", "solution": "通过solution回答"}]}
+        result = _parse_clin(rec)
+        assert len(result) == 1
+        assert result[0][1]["content"] == "通过solution回答"
+
+    def test_no_description_returns_empty(self):
+        assert _parse_clin({"QA_pairs": [{"question": "q", "answer": "a"}]}) == []
+
+    def test_no_qa_pairs_returns_empty(self):
+        assert _parse_clin({"description": "desc"}) == []
+
+
+# ========== 单元测试：_parse_qa ==========
+
+class TestParseQa:
+    """问答解析：Alpaca / LawBench / DISC-Law / CrimeKG / Huatuo / Toyhom。"""
+
+    def test_alpaca_fingpt(self):
+        rec = {"instruction": "What is the sentiment?", "input": "Strong earnings.", "output": "positive"}
+        msgs = _parse_qa(rec)
+        assert msgs is not None
+        assert "sentiment" in msgs[0]["content"]
+        assert msgs[1]["content"] == "positive"
+
+    def test_alpaca_no_input(self):
+        rec = {"instruction": "指令", "input": "", "output": "结果"}
+        msgs = _parse_qa(rec)
+        assert msgs[0]["content"] == "指令"
+
+    def test_lawbench(self):
+        rec = {"instruction": "请回答：", "question": "醉驾是否入刑？", "answer": "已入刑。"}
+        msgs = _parse_qa(rec)
+        assert msgs is not None
+        assert "请回答" in msgs[0]["content"]
+        assert "醉驾是否入刑" in msgs[0]["content"]
+        assert msgs[1]["content"] == "已入刑。"
+
+    def test_disc_law_pair(self):
+        rec = {"id": 1, "input": "案件摘要", "output": "判决结果"}
+        msgs = _parse_qa(rec)
+        assert msgs[0]["content"] == "案件摘要"
+        assert msgs[1]["content"] == "判决结果"
+
+    def test_disc_law_triplet_with_reference(self):
+        rec = {"id": 1, "reference": ["刑法第二百六十四条"], "input": "被告人盗窃", "output": "构成盗窃罪"}
+        msgs = _parse_qa(rec)
+        assert "参考法条" in msgs[0]["content"]
+        assert "刑法第二百六十四条" in msgs[0]["content"]
+
+    def test_disc_law_triplet_reference_already_in_input(self):
+        rec = {"reference": ["刑法第二百六十四条"], "input": "根据刑法第二百六十四条，被告人盗窃", "output": "盗窃罪"}
+        msgs = _parse_qa(rec)
+        assert "参考法条" not in msgs[0]["content"]
+
+    def test_crimekg(self):
+        rec = {"_id": {"$oid": "x"}, "question": "正当防卫？", "answers": ["正当防卫是指..."], "category": "刑法"}
+        msgs = _parse_qa(rec)
+        assert "正当防卫" in msgs[0]["content"]
+        assert "正当防卫是指" in msgs[1]["content"]
 
     def test_huatuo(self):
-        # 真实 Huatuo-26M 或兜底重排；question 内容不定，仅结构断言
-        self._assert_pair(reader("huatuo_medical.jsonl"))
+        rec = {"question": "能吃党参吗？", "response": "可以口服。"}
+        msgs = _parse_qa(rec)
+        assert msgs[0]["content"] == "能吃党参吗？"
+        assert msgs[1]["content"] == "可以口服。"
 
-    def test_raw_medical_txt(self):
-        # 纯文本必须走 read_txt_raw（.txt → medical 生成器）；NFKC 会把全角冒号转半角
-        self._assert_pair(reader("raw_medical.txt", "medical"), asst_start="主诉", asst_marker="诊断")
+    def test_toyhom(self):
+        rec = {"department": "心血管科", "title": "高血压", "ask": "能吃党参吗？", "answer": "可以口服。"}
+        msgs = _parse_qa(rec)
+        assert msgs[0]["content"] == "能吃党参吗？"
+        assert msgs[1]["content"] == "可以口服。"
 
-    # ---- 法律 ----
-    def test_disc_law_alpaca(self):
-        # 真实 DISC-Law-SFT jsonl；instruction/input/output 结构，仅断言结构
-        self._assert_pair(reader("disc_law_legal.jsonl"))
+    def test_empty_record_returns_none(self):
+        assert _parse_qa({}) is None
 
-    def test_lawbench_qa(self):
-        # 真实 LawBench QA；instruction/answer 内容不定，仅结构断言
-        self._assert_pair(reader("lawbench_qa_legal.jsonl"))
+    def test_priority_alpaca_over_lawbench(self):
+        rec = {"instruction": "指令", "input": "输入", "output": "输出", "question": "问题", "answer": "回答"}
+        msgs = _parse_qa(rec)
+        assert msgs[1]["content"] == "输出"
 
-    @unittest.skip("LawBench 无 article+summary 任务，summary 为构造数据")
-    def test_lawbench_summary(self):
-        # 必须命中 article+summary 分支（用 output 会被 Alpaca 分支吞掉）
-        self._assert_pair(reader("lawbench_summary_legal.jsonl"),
-                          user_marker="第二百六十四条", asst_marker="盗窃罪")
 
-    def test_raw_legal_judgment_txt(self):
-        self._assert_pair(reader("raw_legal_judgment.txt", "legal"), asst_marker="判决书")
+# ========== 合成 fixture 测试 ==========
 
-    def test_raw_legal_judgment_bad_txt(self):
-        self._assert_pair(reader("raw_legal_judgment_cn_bad.txt", "legal"), asst_marker="判决书")
+class TestSyntheticData:
+    """合成 fixture：MedQA（jsonl）和 CMMLU（csv）。"""
 
-    @unittest.skip("无真实合同语料来源，当前为构造数据")
-    def test_raw_legal_contract_txt(self):
-        self._assert_pair(reader("raw_legal_contract.txt", "legal"), user_marker="甲方", asst_marker="甲方")
-
-    # ---- 金融 ----
-    @unittest.skip("FinEval .rar 无法解压，当前为领域内构造数据")
-    def test_fineval_mcq(self):
-        self._assert_pair(reader("fineval_mcq_finance.jsonl"), user_marker="题：", asst_start="答案")
-
-    @unittest.skip("FinEval .rar 无法解压，当前为领域内构造数据")
-    def test_fineval_qa(self):
-        # 真实 FinEval 开放问答或兜底重排；answer 内容不定，仅结构断言
-        self._assert_pair(reader("fineval_qa_finance.jsonl"))
-
-    def test_fingpt_input_output(self):
-        # {input, output} 走 Alpaca 分支④；真实 fingpt 或兜底构造，内容不定，仅结构断言
-        self._assert_pair(reader("fingpt_finance.jsonl"))
-
-    @unittest.skip("无真实研报语料来源，当前为构造数据")
-    def test_finance_report(self):
-        self._assert_pair(reader("finance_report_cn.jsonl"), user_marker="亿元", asst_marker="亿元")
-
-    # ---- 教育 ----
-    def test_mmlu_csv(self):
-        # 真实 MMLU 或兜底重排；question 内容/答案字母不定，reader 加 "答案：" 前缀稳定
-        self._assert_pair(reader("mmlu_education.csv"), asst_start="答案")
+    def test_medqa_jsonl(self):
+        s, err = inspect("医疗", [str(SYNTH / "medqa.jsonl")])
+        assert s is not None and err == "", err
+        assert s.type_counts.get("选择题") == 3
 
     def test_cmmlu_csv(self):
-        # 大写列头 + 前导序号列，reader 应正确识别 MCQ 分支；question/答案字母不定，"答案：" 前缀稳定
-        self._assert_pair(reader("cmmlu_education.csv"), asst_start="答案")
+        s, err = inspect("医疗", [str(SYNTH / "cmmlu.csv")])
+        assert s is not None and err == "", err
+        assert s.type_counts.get("选择题") == 4
 
-    @unittest.skip("EduChat 下载仅含 README/LICENSE，无真实数据文件")
-    def test_educhat_alpaca(self):
-        # 真实 EduChat 或兜底构造；instruction/output 内容不定，仅断言结构
-        self._assert_pair(reader("educhat_education.jsonl"))
-
-    @unittest.skip("EduChat 无真实数据，bad 样本亦为构造")
-    def test_educhat_cn_bad_alpaca(self):
-        self._assert_pair(reader("educhat_education_cn_bad.jsonl"), user_marker="学习的看法")
-
-    def test_fingpt_cn_bad_normalizes(self):
-        self._assert_pair(reader("fingpt_finance_cn_bad.jsonl"), asst_start="positive")
+    def test_medqa_run_pipeline(self, tmp_path):
+        import llm_platform.data_pipeline.io as io_mod
+        io_mod.DATA_DIR = tmp_path
+        res = run_pipeline("医疗", [str(SYNTH / "medqa.jsonl")])
+        assert res.kept == 3
+        lines = (tmp_path / "medical_alpaca.jsonl").read_text(encoding="utf-8").strip().split("\n")
+        assert set(json.loads(lines[0])) == {"instruction", "input", "output"}
 
 
-if __name__ == "__main__":
-    unittest.main()
+# ========== 真实数据集成测试 ==========
+
+REAL_FILES = {
+    "CMB-Exam": ("cmb_unzipped/CMB/CMB-Exam/CMB-train/CMB-train-merge.json", "选择题"),
+    "CMB-Clin": ("cmb_unzipped/CMB/CMB-Clin/CMB-Clin-qa.json", "病例问答"),
+    "CrimeKG": ("crimekg/data/qa_corpus.json/qa_corpus.json", "问答"),
+    "DISC-Law-Pair": ("disc-law/DISC-Law-SFT-Pair.jsonl", "问答"),
+    "DISC-Law-Triplet": ("disc-law/DISC-Law-SFT-Triplet-released.jsonl", "问答"),
+    "FinEval-MCQ": ("fineval/data-v2/FinEval_V2_no_test_ans/FinEval_V2_no_test_ans/dev/finance_dev.csv", "选择题"),
+    "FinGPT": ("fingpt/data/train-00000-of-00001-dabab110260ac909.parquet", "问答"),
+    "LawBench": ("lawbench/data/zero_shot/3-8.json", "问答"),
+    "Huatuo": ("huatuo/huatuo.parquet", "问答"),
+    "Toyhom": ("toyhom/样例_内科5000-6000.csv", "问答"),
+}
+
+
+@pytest.mark.parametrize("name", sorted(REAL_FILES))
+def test_real_data_inspect(name):
+    """每个真实数据集都能被 inspect 正确识别。"""
+    rel, expected_type = REAL_FILES[name]
+    path = DL / rel
+    if not path.exists():
+        pytest.skip(f"真实数据未下载：{rel}")
+    s, err = inspect("医疗", [str(path)], limit=50)
+    assert s is not None, f"{name} 识别失败：{err}"
+    assert err == "", f"{name} 错误：{err}"
+    assert s.type_counts.get(expected_type, 0) > 0, f"{name} 期望 {expected_type}>0，实际 {s.type_counts}"
+
+
+@pytest.mark.parametrize("name", sorted(REAL_FILES))
+def test_real_data_run_pipeline(name, tmp_path):
+    """每个真实数据集都能被 run_pipeline 全量落盘。"""
+    rel, _ = REAL_FILES[name]
+    path = DL / rel
+    if not path.exists():
+        pytest.skip(f"真实数据未下载：{rel}")
+    import llm_platform.data_pipeline.io as io_mod
+    io_mod.DATA_DIR = tmp_path
+    res = run_pipeline("医疗", [str(path)])
+    assert res.kept > 0, f"{name} kept=0"
+    out = tmp_path / "medical_alpaca.jsonl"
+    assert out.exists(), f"{name} 输出文件不存在"
+    first = json.loads(out.read_text(encoding="utf-8").splitlines()[0])
+    assert set(first) == {"instruction", "input", "output"}, f"{name} Alpaca 格式错误"
+
+
+# ========== 门面测试 ==========
+
+class TestFacade:
+    """inspect/run_pipeline 门面行为。"""
+
+    def test_unsupported_domain_inspect(self):
+        s, err = inspect("农业", ["fake.json"])
+        assert s is None and "不支持" in err
+
+    def test_unsupported_domain_run_pipeline(self):
+        with pytest.raises(ValueError, match="不支持"):
+            run_pipeline("农业", ["fake.json"])
+
+    def test_empty_files_inspect(self):
+        s, err = inspect("医疗", [])
+        assert s is None and err == ""
+
+    def test_empty_files_run_pipeline(self):
+        with pytest.raises(ValueError, match="请先上传"):
+            run_pipeline("医疗", [])
+
+    def test_unrecognizable_data(self, tmp_path):
+        f = tmp_path / "bad.jsonl"
+        f.write_text('{"foo": "bar"}\n', encoding="utf-8")
+        s, err = inspect("医疗", [str(f)])
+        assert s is None and "未能识别" in err
+
+    def test_mixed_upload(self):
+        s, err = inspect("医疗", [str(SYNTH / "cmmlu.csv"), str(SYNTH / "medqa.jsonl")], limit=50)
+        assert s is not None and err == "", err
+        assert s.type_counts.get("选择题", 0) > 0
+
+
+# ========== SCHEMAS 完整性测试 ==========
+
+class TestSchemas:
+    """SCHEMAS 注册完整性。"""
+
+    def test_mcq_schemas(self):
+        assert set(SCHEMAS["mcq"]) == {"CMB-Exam", "MedQA", "CMMLU/MMLU", "FinEval-MCQ"}
+
+    def test_clin_schemas(self):
+        assert set(SCHEMAS["clin"]) == {"CMB-Clin"}
+
+    def test_qa_schemas(self):
+        assert set(SCHEMAS["qa"]) == {
+            "CrimeKG-QA", "DISC-Law-Pair", "DISC-Law-Triplet",
+            "FinGPT-sentiment", "LawBench", "Huatuo-26M", "Toyhom",
+        }
+
+    def test_supported_domains(self):
+        assert SUPPORTED == ["医疗", "法律", "金融", "教育"]
+
+    def test_all_schemas_have_keys_and_fmt(self):
+        for slug, datasets in SCHEMAS.items():
+            for name, spec in datasets.items():
+                assert "keys" in spec, f"{slug}/{name} 缺 keys"
+                assert "fmt" in spec, f"{slug}/{name} 缺 fmt"

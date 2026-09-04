@@ -13,10 +13,5 @@ def describe(label):
 
 
 def slug(label):
-    """中文领域标签 -> 资源目录 slug（如 医疗 -> medical）。未知标签回落通用。"""
+    """中文领域标签 -> slug（如 医疗 -> medical）。未知标签回落 generic。"""
     return DOMAIN_SLUGS.get(label, "generic")
-
-
-def default_preset_name(label):
-    """该领域默认预设名（资源目录下 preset.json 的 name，缺失则用 '通用'）。"""
-    return slug(label) if slug(label) in DOMAIN_SLUGS.values() else "通用"
