@@ -19,4 +19,6 @@ if not exist ".venv-local\Scripts\python.exe" (
   exit /b 1
 )
 
-.venv-local\Scripts\python app.py
+pushd server
+"%~dp0.venv-local\Scripts\python.exe" app.py
+popd

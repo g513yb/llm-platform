@@ -58,14 +58,22 @@
 
 ```
 llm-platform/
-├── app.py                     # 入口：构建 UI + 预热模型 + 启动（GPU 预热失败也不阻断，纯 CPU 功能仍可用）
+├── server/                    # FastAPI 后端入口（uvicorn :8000）
+│   ├── app.py                 # 入口：模型加载 + LoRA 推理/训练 + 流式对话（MODEL_NAME/PORT env 可覆盖）
+│   ├── training.py            # LoRA 训练任务管理
+│   ├── dataset_utils.py       # 数据集解析
+│   └── adapters/              # LoRA 权重目录
+├── frontend/                  # React+Vite+TS 前端（npm run dev :5173 / build → dist/）
+│   ├── src/                   # 页面/组件/类型/模拟数据
+│   ├── API.md                 # 前后端接口契约
+│   └── package.json
 ├── config.py                  # 唯一配置源：MODEL_NAME / DOMAINS / DOMAIN_SLUGS / DATA_DIR / RESOURCE_DIR
 ├── requirements.txt           # 云端运行依赖（不重装 AutoDL 自带 CUDA torch）
-├── run.sh                     # AutoDL 启动脚本
+├── run.sh                     # AutoDL 启动脚本（cd server && python app.py）
 ├── run.bat                    # 本机提示（需在云端跑 GPU）
 ├── deploy.sh                  # 一键让云端 git clone/pull 同步代码 + 装依赖 + 后台启动 / 看日志
 ├── start_app.sh               # 云端后台启动脚本（setsid 脱离会话）
-├── samples/                   # 示例数据（仅开发测试，不进 UI 入口）
+├── samples/                   # 示例数据（仅开发测试）
 ├── .venv-verify/              # 本地轻量 venv（仅 pandas，用于纯 CPU 管道本地验证）
 ├── resources/                 # 领域预设资源（知识即数据）
 │   ├── _shared/               # deid / units 基础表
@@ -77,26 +85,10 @@ llm-platform/
     ├── model_manager.py       # 懒加载单例 load_model()，设备/精度探测
     ├── chat.py                # 对话管线：apply_chat_template + generate + 流式
     ├── domain.py              # 领域注册表 / slug / 默认预设
-    ├── data_pipeline/         # 数据处理门面
-    │   ├── __init__.py        # run_pipeline(domain, file_paths, texts, …) → PipelineSummary
-    │   ├── readers.py         # 输入归一化（Alpaca/ShareGPT/CSV/.txt）
-    │   ├── cleaners.py        # 通用逐轮清洗 + 去重
-    │   ├── txt_generator.py   # 纯文本 → 问答对（医疗/法律规则抽取）
-    │   └── io.py              # messages→Alpaca 落盘  jsonl/json + config.json
-    ├── domain_presets/        # 阶段化领域预设引擎
-    │   ├── engine.py          # Stage/WorkItem/Issue/DomainPreset/PipelineCtx/StageStats
-    │   ├── resources.py       # ResourceBundle.load()（读 resources/、合并 shared、编译正则）
-    │   ├── stages_generic.py  # 通用阶段
-    │   ├── stages_legal.py    # DocTypeStage + LegalStructureStage
-    │   └── __init__.py        # STAGE_REGISTRY / make_stage / build_preset / default_preset
-    └── ui/
-        ├── app_layout.py      # Blocks：领域下拉 + 进入工作台 + Tabs
-        ├── placeholder.py     # 占位 Tab 渲染
-        └── tabs/              # ★ 接缝：每个工作台 Tab 一个模块（TITLE + build(domain)）
-            ├── __init__.py    # TAB_REGISTRY
-            ├── chat_tab.py    # 对话（真）
-            ├── data_tab.py    # 数据处理（真）
-            └── train/weights/eval_tab.py  # 占位
+    └── data_pipeline/         # 数据处理门面（极简三文件）
+        ├── __init__.py        # run_pipeline(domain, file_paths, texts, …) → PipelineSummary
+        ├── readers.py         # 输入归一化（Alpaca/ShareGPT/CSV/.txt，12 种 schema）
+        └── io.py              # messages→Alpaca 落盘 jsonl/json
 ```
 
 ## 快速开始
@@ -106,13 +98,13 @@ llm-platform/
 2. **一键部署**（`./deploy.sh` 已含同步 + 装依赖；也可单独云端手启）：
    ```bash
    cd /root/autodl-tmp/llm-platform && bash run.sh
-   # = pip install -r requirements.txt && python app.py
+   # = pip install -r requirements.txt && cd server && python app.py
    ```
    > AutoDL 镜像自带 CUDA torch，`run.sh` 只补装缺失库，不重装 torch。权重走 `/root/autodl-tmp/llm-platform/hf`。
 3. **访问**（本地终端端口转发，只转发不占 GPU）：
    ```bash
-   ssh -N -L 7860:localhost:7860 autodl     # ~/.ssh/config 里已配好别名 autodl
-   # 浏览器打开 http://localhost:7860
+   ssh -N -L 8000:localhost:8000 autodl     # ~/.ssh/config 里已配好别名 autodl（转发 FastAPI 后端）
+   # 前端：本机 frontend/ 下 npm run dev → http://localhost:5173 联调；或托管 dist/ 静态文件
    ```
 
 ### 开发机模式（共用一个支持 `.venv-verify` 的轻量环境）
@@ -175,10 +167,10 @@ print(res.kept, res.drop_reasons, res.output_files)   # 落盘 data/医疗_alpac
 ## 常见问题
 
 - **`CUDA 不可用`**：在无 GPU 机器上跑。聊天/训练需 AutoDL GPU 实例；数据处理纯 CPU 无需。
-- **聊天无卡也用不了**：应用在无卡时也能启动（预热失败被捕获），仅对话 Tab 需挂卡才可用。
+- **聊天无卡也用不了**：FastAPI 后端启动时会加载模型，对话/训练需挂卡才可用。
 - **无卡能看到数据处理但点对话报错**：正常，属预期。
 - **首次权重下载慢**：AutoDL 开「学术加速」。
-- **版本冲突**：AutoDL 镜像 torch 较旧时，去掉 `requirements.txt` 里 `transformers` 的版本号再 `pip install -U transformers gradio accelerate`。
+- **版本冲突**：AutoDL 镜像 torch 较旧时，去掉 `requirements.txt` 里 `transformers` 的版本号再 `pip install -U transformers fastapi accelerate`。
 - **本地改代码要上云**：`git push origin main` 后 `./deploy.sh`（云端 git pull 同步 + 装依赖）+ `./deploy.sh start` 重启；`./deploy.sh logs` 看日志。
 
 ## 路线图

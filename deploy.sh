@@ -10,7 +10,7 @@ SSH_ALIAS="${SSH_ALIAS:-autodl}"            # 对应 ~/.ssh/config 里的 Host�
 REMOTE_DIR="/root/autodl-tmp/llm-platform"  # 放数据盘（持久、大、换镜像不丢）
 GIT_REPO="${GIT_REPO:-https://github.com/g513yb/llm-platform}"  # 云端克隆的远程仓库
 GIT_BRANCH="${GIT_BRANCH:-main}"           # 同步分支（先 push 到该分支，再 deploy）
-SPARSE_PATHS="${SPARSE_PATHS:-app.py config.py requirements.txt run.sh start_app.sh llm_platform resources tests}"  # 云端运行所需顶层路径白名单（稀疏检出）；tests/ 供云端跑数据下载+测试流水线（./deploy.sh datatest），docs/README/CLAUDE/LICENSE/samples/*.bat 等不检出
+SPARSE_PATHS="${SPARSE_PATHS:-requirements.txt run.sh start_app.sh server frontend resources tests}"  # 云端运行所需顶层路径白名单（稀疏检出）；server/ 含后端入口+config+data_pipeline+model_manager 等，frontend/ 新前端；tests/ 供云端跑数据下载+测试流水线（./deploy.sh datatest），docs/README/CLAUDE/LICENSE/samples/*.bat 等不检出
 REMOTE_INIT="source /root/miniconda3/etc/profile.d/conda.sh 2>/dev/null && conda activate base 2>/dev/null"
 
 if [[ "${1:-}" == "logs" ]]; then

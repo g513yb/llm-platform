@@ -24,3 +24,11 @@ tests/report.json
 **/.codegraph/
 **/.codeartsdoer/
 **/llm-platform/
+
+# 前端构建产物与依赖（frontend/）
+frontend/node_modules/
+frontend/dist/
+frontend/package-lock.json
+frontend/tsconfig.tsbuildinfo
+frontend/dev-server.log
+frontend/dev-server.err.log

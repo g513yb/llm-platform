@@ -13,4 +13,4 @@ source /root/miniconda3/etc/profile.d/conda.sh 2>/dev/null && conda activate bas
 
 pkill -f "python app.py" 2>/dev/null || true   # 干掉旧实例（若有）
 
-exec python app.py                             # exec 替换为 python 进程
+cd server && exec python app.py                # exec 替换为 python 进程（在 server/ 内运行，同目录导入 training/dataset_utils）

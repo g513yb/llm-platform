@@ -1,7 +1,7 @@
 # CLAUDE.md — 多域 LLM 微调与评测平台
 
 ## 项目是什么
-Gradio(BLOCKS) + PyTorch + HuggingFace Transformers + PEFT(LoRA) 的多领域大模型训练与评测平台。完整闭环：**选领域 → 数据处理 → LoRA微调 → 保存权重 → 复用对话 → 多维度评测 → 跨领域对比**。
+FastAPI + React(Vite/TS) + PyTorch + HuggingFace Transformers + PEFT(LoRA) 的多领域大模型训练与评测平台。完整闭环：**选领域 → 数据处理 → LoRA微调 → 保存权重 → 复用对话 → 多维度评测 → 跨领域对比**。
 
 当前进度：**Sprint 0（工作台 + Qwen2.5-7B 流式对话）+ Sprint 1（数据处理 + 四领域数据集 + Alpaca 输出）完成**；训练/权重/评测为后续 Sprint。
 
@@ -12,15 +12,15 @@ Gradio(BLOCKS) + PyTorch + HuggingFace Transformers + PEFT(LoRA) 的多领域大
 - **每域双预设**：严格 `_cn`（结构/选项/数值要素）+ 宽松 `_qa`（`presets/qa.json`，`qc.mode:"pair"`；问答/情感/选择类）。`run_pipeline(..., preset=)` 选择。
 
 ## 目录（要点）
-- `app.py`：入口（Gradio 启动；GPU 预热失败不阻断，纯 CPU 功能仍可用）。
+- `server/app.py`：FastAPI 后端入口（uvicorn 启动 :8000；`MODEL_NAME`/`PORT` 环境变量可覆盖，同目录导入 `training`/`dataset_utils`，须在 `server/` 下运行）。
 - `config.py`：MODEL_NAME(env可覆盖)/DOMAINS/DOMAIN_SLUGS/DATA_DIR/RESOURCE_DIR/OUTPUT_FORMAT。
 - `llm_platform/data_pipeline/`：`run_pipeline` 门面 / readers / cleaners / txt_generator / io。
 - `llm_platform/domain_presets/`：engine / resources / stages_generic / stages_legal / __init__(STAGE_REGISTRY)。
-- `llm_platform/ui/tabs/`：chat、data（真）；train/weights/eval（占位 stub）。
+- `frontend/`：React+Vite+TS 前端（`npm run dev` :5173 / `npm run build` → dist/）；前后端契约见 `frontend/API.md`。
 - `resources/{_shared,medical,legal,finance,education}/`；`docs/DATASETS.md`（数据集用法）、`docs/ENVIRONMENT.md`（部署）。
 
 ## 常用命令
-- 云端部署（本机）：先 `git push origin main`，再 `./deploy.sh`（ssh 让云端 `git clone/pull` 远程仓库同步代码 + 装依赖）、`./deploy.sh start`（后台启动）、`./deploy.sh logs`（看日志）；本机 `ssh -N -L 7860:localhost:7860 autodl` 转发，浏览器 `http://localhost:7860`。代码不本地直传，统一走 GitHub 仓库；浅克隆 `--depth=1` + 稀疏检出仅拉运行所需（`SPARSE_PATHS` 白名单，排除 docs/测试/本机脚本等）。
+- 云端部署（本机）：先 `git push origin main`，再 `./deploy.sh`（ssh 让云端 `git clone/pull` 远程仓库同步代码 + 装依赖）、`./deploy.sh start`（后台启动）、`./deploy.sh logs`（看日志）；本机 `ssh -N -L 8000:localhost:8000 autodl` 转发后端，前端本地 `npm run dev` 联调或托管 `dist/`。代码不本地直传，统一走 GitHub 仓库；浅克隆 `--depth=1` + 稀疏检出仅拉运行所需（`SPARSE_PATHS` 白名单，排除 docs/测试/本机脚本等）。
 - 云端手启：`bash run.sh` 或 `bash start_app.sh`。
 - **本地纯 CPU 验证**（无需 GPU/云）：`cd D:\claude\llm-platform && PYTHONIOENCODING=utf-8 .venv-verify/Scripts/python - <<'PY' … PY`（`.venv-verify` 仅 pandas/numpy）。
 - Git：`git add -A && git commit -m "…" && git push origin main`；仓库 `https://github.com/g513yb/llm-platform`；`gh` CLI 已装（`C:\Program Files\GitHub CLI\gh.exe`）。
@@ -44,4 +44,4 @@ reader(多格式→messages) → generic_clean → preset.run(阶段级联) → 
 - **MCQ-CSV 分支先行**：`question+A..D+answer` 判定须在通用"问答列"之前（否则丢选项）。
 - 中文编码 GBK（Toyhom CSV）；多选答案 `_norm_answer`；medical 缺"主诉+诊断"→严格预设会丢（用宽松）。
 - 复数键兼容：`option/options`、`answer/answer_idx/response`、`input/output`。
-- `OUTPUT_FORMAT` 默认 `alpaca`；开发时本地验证用 `.venv-verify`，UI/需 GPU 用云。
+- `OUTPUT_FORMAT` 默认 `alpaca`；开发时本地验证用 `.venv-verify`，server/需 GPU 用云。

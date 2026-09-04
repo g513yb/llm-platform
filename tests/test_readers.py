@@ -16,10 +16,10 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "server"))
 
-from llm_platform.data_pipeline import SUPPORTED, inspect, run_pipeline, SCHEMAS
-from llm_platform.data_pipeline.readers import (
+from data_pipeline import SUPPORTED, inspect, run_pipeline, SCHEMAS
+from data_pipeline.readers import (
     _parse_clin, _parse_mcq, _parse_qa, _to_messages,
 )
 

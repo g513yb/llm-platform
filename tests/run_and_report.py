@@ -1,6 +1,6 @@
 """运行测试套件并生成可视化报告（自包含 HTML + 结构化 JSON），零第三方依赖。
 
-配合云端流水线（tests/cloud_run.sh）：下载数据 → build_fixtures → 本脚本跑测试 → 出报告。
+配合云端流水线（tests/cloud_run.sh）：下载数据 → 本脚本跑测试 → 出报告。
 报告为纯静态单文件（内嵌 CSS，折叠用原生 <details>），可直接浏览器打开 / 静态托管 / 端口转发查看。
 
 若提供 --expected（默认 tests/expected.json），则对每个用例比对预期 vs 实际，生成评估结果

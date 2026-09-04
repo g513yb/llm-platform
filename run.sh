@@ -28,4 +28,4 @@ export MODEL_NAME="${MODEL_NAME:-/root/autodl-tmp/llm-platform/models/Qwen2.5-7B
 pip install --upgrade pip
 pip install -r requirements.txt
 
-python app.py
+cd server && exec python app.py
