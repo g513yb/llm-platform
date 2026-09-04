@@ -78,9 +78,7 @@ def run_pipeline(domain: str, file_paths: list[str]) -> PipelineSummary:
 
 
 def _preview(messages: list[dict]) -> dict:
-    user = next((m["content"] for m in messages if m["role"] == "user"), "")
-    asst = next((m["content"] for m in messages if m["role"] == "assistant"), "")
-    return {"question": user[:120], "answer": asst[:120]}
+    return io_mod.messages_to_alpaca(messages)
 
 
 def format_summary(s: PipelineSummary) -> str:

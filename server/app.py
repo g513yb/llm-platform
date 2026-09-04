@@ -5,14 +5,14 @@ import shutil
 import uuid
 from threading import Lock, Thread
 
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 import uvicorn
 
 import training
-from dataset_utils import parse_dataset
+
 from config import MODEL_NAME
 
 MODEL_PATH = MODEL_NAME
@@ -148,7 +148,7 @@ class TrainRequest(BaseModel):
 
 
 @app.post("/api/datasets/upload")
-async def upload_dataset(file: UploadFile = File(...)):
+async def upload_dataset(file: UploadFile = File(...), domain: str = Form(...)):
     ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in (".csv", ".txt", ".json", ".jsonl"):
         return {"error": "仅支持 csv/txt/json/jsonl 格式"}
@@ -157,15 +157,57 @@ async def upload_dataset(file: UploadFile = File(...)):
     with open(save_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
     try:
-        samples = parse_dataset(save_path)
+        from data_pipeline import inspect
+        s, err = inspect(domain, [save_path])
+        if err:
+            return {"datasetId": dataset_id, "filename": file.filename, "error": err}
         return {
             "datasetId": dataset_id,
             "filename": file.filename,
             "size": os.path.getsize(save_path),
-            "samples": len(samples),
+            "kept": s.kept,
+            "dropped": s.dropped,
+            "typeCounts": s.type_counts,
         }
     except Exception as e:
         return {"datasetId": dataset_id, "filename": file.filename, "error": str(e)}
+
+
+class ProcessRequest(BaseModel):
+    datasetId: str
+    domain: str
+
+
+@app.post("/api/datasets/process")
+async def process_dataset(req: ProcessRequest):
+    files = [f for f in os.listdir(training.DATASET_DIR) if f.startswith(req.datasetId + "_")]
+    if not files:
+        return {"error": "数据集不存在，请先上传"}
+    dataset_path = os.path.join(training.DATASET_DIR, files[0])
+    try:
+        from data_pipeline import run_pipeline
+        s = run_pipeline(req.domain, [dataset_path])
+        return {
+            "total": s.total,
+            "kept": s.kept,
+            "dropped": s.dropped,
+            "typeCounts": s.type_counts,
+            "outputFiles": [os.path.basename(f) for f in s.output_files],
+            "preview": s.preview,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/datasets/output/{filename}")
+async def get_output_file(filename: str):
+    from config import DATA_DIR
+    if ".." in filename or "/" in filename or "\\" in filename:
+        return {"error": "非法文件名"}
+    path = DATA_DIR / filename
+    if not path.exists() or not path.is_file():
+        return {"error": "文件不存在"}
+    return {"filename": filename, "content": path.read_text(encoding="utf-8")}
 
 
 @app.post("/api/train")
@@ -300,4 +342,4 @@ async def chat(req: ChatRequest):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=PORT)
+    uvicorn.run("app:app", host="127.0.0.1", port=PORT, reload=True)

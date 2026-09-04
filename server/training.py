@@ -7,7 +7,7 @@ import threading
 from datetime import datetime
 
 
-from dataset_utils import parse_dataset
+from data_pipeline.readers import read_all
 from config import MODEL_NAME
 
 MODEL_PATH = MODEL_NAME
@@ -145,7 +145,13 @@ def run_training(task_id, dataset_path, rank, lr, epochs, batch, name, domain, d
     model = None
     try:
         release_fn()
-        samples = parse_dataset(dataset_path)
+        items, _, _ = read_all([dataset_path])
+        samples = []
+        for msgs in items:
+            u = next((m["content"] for m in msgs if m["role"] == "user"), None)
+            a = next((m["content"] for m in msgs if m["role"] == "assistant"), None)
+            if u and a:
+                samples.append({"instruction": u, "output": a})
         tokenizer = AutoTokenizer.from_pretrained(model_path)
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
