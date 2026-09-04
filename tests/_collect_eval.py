@@ -19,6 +19,7 @@ cases = [
     ("医疗", "cmb_clin_medical_cn_bad.jsonl", "medical_cn", "test_cmb_clin_bad_medical_cn_dropped"),
     ("法律", "lawbench_qa_legal.jsonl", "legal_qa", "test_lawbench_qa_legal_qa_kept"),
     ("法律", "lawbench_qa_legal.jsonl", "legal_cn", "test_lawbench_qa_legal_cn_dropped"),
+    ("法律", "disc_law_legal.jsonl", "legal_qa", "test_disc_law_legal_qa_kept"),
     ("法律", "raw_legal_judgment.txt", "legal_cn", "test_raw_legal_judgment_legal_cn_kept"),
     ("法律", "raw_legal_judgment_cn_bad.txt", "legal_cn", "test_raw_legal_judgment_bad_cn_dropped"),
     ("金融", "fingpt_finance.jsonl", "finance_qa", "test_fingpt_finance_qa_kept"),

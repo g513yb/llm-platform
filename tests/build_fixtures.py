@@ -188,19 +188,27 @@ def _read_any(path: Path) -> pd.DataFrame:
 
 
 def build_toyhom() -> None:
-    csvs = sorted((SCRATCH / "toyhom" / "Data_数据" / "IM_内科").glob("*.csv"), key=lambda p: p.stat().st_size)
+    # 合并多科室 CSV（内科、男科、妇产科、肿瘤科、儿科、外科），轮询直到凑够 SAMPLES 条
+    data_root = SCRATCH / "toyhom" / "Data_数据"
     rows = []
-    for csv in csvs:
-        df = _read_any(csv)
-        for _, row in df.iterrows():
-            rows.append(row.to_dict())
+    dept_dirs = sorted([d for d in data_root.iterdir() if d.is_dir()]) if data_root.is_dir() else []
+    for dept_dir in dept_dirs:
+        for csv in sorted(dept_dir.glob("*.csv"), key=lambda p: p.stat().st_size):
+            try:
+                df = _read_any(csv)
+            except (ValueError, OSError):
+                continue
+            for _, row in df.iterrows():
+                rows.append(row.to_dict())
+                if len(rows) >= SAMPLES:
+                    break
             if len(rows) >= SAMPLES:
                 break
         if len(rows) >= SAMPLES:
             break
     (FIXTURES / "toyhom_medical.csv").parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(FIXTURES / "toyhom_medical.csv", index=False, encoding="gbk")
-    note(f"toyhom_medical.csv   ← 真实 Toyhom（{len(rows)} 条，GBK）")
+    note(f"toyhom_medical.csv   ← 真实 Toyhom 多科室（{len(rows)} 条，GBK）")
 
 
 # ============================================================ 6. MedQA（真实优先：Drive 题库；兜底：CMB-Exam 重排）
@@ -272,30 +280,52 @@ def build_huatuo() -> None:
     write_jsonl(FIXTURES / "huatuo_medical.jsonl", rows)
 
 
-# ============================================================ 8. LawBench-QA
+# ============================================================ 8. LawBench-QA（合并多个 zero_shot 子任务）
 def build_lawbench_qa() -> None:
-    data = load_json(SCRATCH / "lawbench" / "data" / "zero_shot" / "2-1.json")
     rows = []
-    for rec in data:
-        if isinstance(rec, dict) and rec.get("question") and rec.get("answer"):
-            rows.append({
-                "instruction": rec.get("instruction", "回答以下法律问题。"),
-                "input": rec["question"],
-                "output": rec["answer"],
-            })
-            if len(rows) >= SAMPLES:
-                break
+    zs_dir = SCRATCH / "lawbench" / "data" / "zero_shot"
+    for p in sorted(zs_dir.glob("*.json")):
+        try:
+            data = load_json(p)
+        except (json.JSONDecodeError, OSError):
+            continue
+        for rec in data:
+            if isinstance(rec, dict) and rec.get("question") and rec.get("answer"):
+                rows.append({
+                    "instruction": rec.get("instruction", "回答以下法律问题。"),
+                    "input": rec["question"],
+                    "output": rec["answer"],
+                })
+                if len(rows) >= SAMPLES:
+                    break
+        if len(rows) >= SAMPLES:
+            break
     write_jsonl(FIXTURES / "lawbench_qa_legal.jsonl", rows)
-    note(f"lawbench_qa_legal.jsonl   ← 真实 LawBench zero_shot/2-1（{len(rows)} 条，含 instruction 任务描述）")
+    note(f"lawbench_qa_legal.jsonl   ← 真实 LawBench zero_shot 多子任务（{len(rows)} 条，含 instruction 任务描述）")
 
 
-# ============================================================ 9. DISC-Law-SFT（真实优先：HF parquet Alpaca；兜底：LawBench 重排）
+# ============================================================ 9. DISC-Law-SFT（真实优先：jsonl Alpaca；兜底：法律领域内构造）
 def build_disc_law() -> None:
     rows = []
-    for r in _parquet_rows(SCRATCH / "disc_law", SAMPLES, instruction="", output=""):
-        rows.append({"instruction": str(r["instruction"]), "input": str(r.get("input", "")), "output": str(r["output"])})
+    for p in sorted((SCRATCH / "disc-law").rglob("*.jsonl")):
+        try:
+            for line in p.read_text(encoding="utf-8", errors="ignore").splitlines():
+                if not line.strip():
+                    continue
+                r = json.loads(line)
+                inp = str(r.get("input", "")).strip()
+                out = str(r.get("output", "")).strip()
+                if inp and out:
+                    rows.append({"instruction": str(r.get("instruction", "回答以下法律问题。")),
+                                 "input": inp, "output": out})
+                    if len(rows) >= SAMPLES:
+                        break
+        except (json.JSONDecodeError, OSError):
+            continue
+        if len(rows) >= SAMPLES:
+            break
     if rows:
-        note(f"disc_law_legal.jsonl   ← 真实 DISC-Law-SFT（{len(rows)} 条，需 pyarrow）")
+        note(f"disc_law_legal.jsonl   ← 真实 DISC-Law-SFT（{len(rows)} 条 jsonl）")
     else:
         # 兜底：法律领域内构造（法律咨询/法规问答），不重排 LawBench 纠错任务
         disc_fallback = [
@@ -323,13 +353,25 @@ def build_lawbench_summary() -> None:
     note("lawbench_summary_legal.jsonl   ← article 取自真实刑法条文；summary 为构造（LawBench 本仓库无 article/summary 任务）")
 
 
-# ============================================================ 11. raw 判决书（真实 LawCrime）+ _bad（去案号）
+# ============================================================ 11. raw 判决书（真实 LawCrime，选含"判决书"的）+ _bad（去案号）
 def build_raw_legal() -> None:
-    text = (SCRATCH / "lawcrime" / "corpus_lawsuit" / "24.txt").read_text(encoding="utf-8", errors="ignore")
-    # 去掉 metadata 两行（category/title/publictime），仅保留 content 正文
-    body = text.split("content:", 1)[-1]
-    write_txt(FIXTURES / "raw_legal_judgment.txt", body.strip())
-    # _bad：构造一份"缺案号"判决书（真实判决书正文常含其他案号引用，删一行无法让 has_case_no 失效）
+    # 从 corpus_lawsuit 中选一个含"判决书"的文档（reader 按整文识别 doc_type）
+    corpus_dir = SCRATCH / "lawcrime" / "corpus_lawsuit"
+    body = ""
+    for p in sorted(corpus_dir.glob("*.txt"), key=lambda x: x.name):
+        try:
+            text = p.read_text(encoding="utf-8", errors="ignore")
+            candidate = text.split("content:", 1)[-1].strip()
+            if "判决书" in candidate[:200] and len(candidate) > 500:
+                body = candidate
+                break
+        except OSError:
+            continue
+    if not body:
+        text = (SCRATCH / "lawcrime" / "corpus_lawsuit" / "24.txt").read_text(encoding="utf-8", errors="ignore")
+        body = text.split("content:", 1)[-1].strip()
+    write_txt(FIXTURES / "raw_legal_judgment.txt", body)
+    # _bad：构造一份"缺案号"判决书
     bad = (
         "某某市中级人民法院\n"
         "刑事判决书\n"
@@ -340,7 +382,7 @@ def build_raw_legal() -> None:
         "判决如下：被告人张三犯盗窃罪，判处有期徒刑一年。"
     )
     write_txt(FIXTURES / "raw_legal_judgment_cn_bad.txt", bad)
-    note("raw_legal_judgment.txt ← 真实 LawCrime corpus_lawsuit/24 刑事判决书；_bad ← 构造缺案号，测 legal_cn 丢弃分支")
+    note("raw_legal_judgment.txt ← 真实 LawCrime 刑事判决书（含'判决书'关键字）；_bad ← 构造缺案号，测 legal_cn 丢弃分支")
 
 
 # ============================================================ 12. 合同（构造）
@@ -449,22 +491,33 @@ def build_finance_report() -> None:
     note("finance_report_cn.jsonl   ← 构造（含 %/亿元），测 finance_cn 数值+单位指标")
 
 
-# ============================================================ 16/17. MMLU / CMMLU（CMMLU 真实；MMLU 真实优先 data/csv，兜底用 CMMLU 行重排）
+# ============================================================ 16/17. MMLU / CMMLU（合并多学科真实数据）
 def build_edu_mcq() -> None:
-    src = SCRATCH / "cmmlu" / "data" / "dev" / "agronomy.csv"
-    df = pd.read_csv(src, encoding="utf-8")
+    # CMMLU：合并 test/ 多学科（比 dev/ 大得多），轮询各学科 csv 直到凑够 SAMPLES 条
     cmmlu_rows = []
-    for i, row in df.iterrows():
-        if i == 0:
-            continue   # 避开第一行（第0行有 Unnamed 序号问题）
-        rec = {"Question": str(row["Question"]), "A": str(row["A"]), "B": str(row["B"]),
-               "C": str(row["C"]), "D": str(row["D"]), "Answer": str(row["Answer"])}
-        cmmlu_rows.append(dict({"Unnamed: 0": i}, **rec))
+    test_dir = SCRATCH / "cmmlu" / "data" / "test"
+    dev_dir = SCRATCH / "cmmlu" / "data" / "dev"
+    for csv_dir in (test_dir, dev_dir):
+        for p in sorted(csv_dir.glob("*.csv")):
+            try:
+                df = pd.read_csv(p, encoding="utf-8")
+            except (UnicodeDecodeError, OSError, pd.errors.ParserError):
+                continue
+            for i, row in df.iterrows():
+                if not str(row.get("Question", "")).strip():
+                    continue
+                rec = {"Question": str(row["Question"]), "A": str(row["A"]), "B": str(row["B"]),
+                       "C": str(row["C"]), "D": str(row["D"]), "Answer": str(row["Answer"])}
+                cmmlu_rows.append(dict({"Unnamed: 0": len(cmmlu_rows)}, **rec))
+                if len(cmmlu_rows) >= SAMPLES:
+                    break
+            if len(cmmlu_rows) >= SAMPLES:
+                break
         if len(cmmlu_rows) >= SAMPLES:
             break
     (FIXTURES / "cmmlu_education.csv").parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(cmmlu_rows).to_csv(FIXTURES / "cmmlu_education.csv", index=False, encoding="utf-8")
-    # MMLU：真实优先 _downloads/mmlu/data/{dev,val,test}/*.csv（小写列 question,A..D,answer）
+    # MMLU：合并多学科 data/*.csv（小写列 question,a,b,c,d,answer），轮询直到凑够 SAMPLES 条
     mmlu_rows: list[dict] = []
     try:
         for p in sorted((SCRATCH / "mmlu" / "data").rglob("*.csv")):
@@ -486,12 +539,12 @@ def build_edu_mcq() -> None:
     except OSError:
         pass
     if mmlu_rows:
-        note(f"mmlu/cmmlu_education.csv   ← 真实 CMMLU agronomy {len(cmmlu_rows)} 行 + 真实 MMLU data csv {len(mmlu_rows)} 行")
+        note(f"mmlu/cmmlu_education.csv   ← 真实 CMMLU 多学科 {len(cmmlu_rows)} 行 + 真实 MMLU 多学科 {len(mmlu_rows)} 行")
     else:
         for c in cmmlu_rows:
             mmlu_rows.append({"question": c["Question"], "A": c["A"], "B": c["B"],
                               "C": c["C"], "D": c["D"], "answer": c["Answer"]})
-        note(f"mmlu/cmmlu_education.csv   ← 真实 CMMLU agronomy {len(cmmlu_rows)} 行；MMLU 兜底用 CMMLU 内容按小写列重排 {len(mmlu_rows)} 行")
+        note(f"mmlu/cmmlu_education.csv   ← 真实 CMMLU 多学科 {len(cmmlu_rows)} 行；MMLU 兜底用 CMMLU 内容按小写列重排 {len(mmlu_rows)} 行")
     pd.DataFrame(mmlu_rows).to_csv(FIXTURES / "mmlu_education.csv", index=False, encoding="utf-8")
 
 

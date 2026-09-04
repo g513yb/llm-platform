@@ -64,9 +64,8 @@ class TestReaders(unittest.TestCase):
         self._assert_pair(reader("raw_medical.txt", "medical"), asst_start="主诉", asst_marker="诊断")
 
     # ---- 法律 ----
-    @unittest.skip("DISC-Law 下载为 jsonl 但代码找 parquet，当前兜底构造")
     def test_disc_law_alpaca(self):
-        # 真实 DISC-Law-SFT 或兜底重排；instruction 内容不定，仅结构断言
+        # 真实 DISC-Law-SFT jsonl；instruction/input/output 结构，仅断言结构
         self._assert_pair(reader("disc_law_legal.jsonl"))
 
     def test_lawbench_qa(self):

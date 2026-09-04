@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "48 个测试用例预期定义。19 个 skip（非真实数据，待真实数据后启用）；29 个 pass（真实数据 + bad fixture 测过滤逻辑）。",
+  "description": "48 个测试用例预期定义。17 个 skip（非真实数据，待真实数据后启用）；31 个 pass（真实数据 + bad fixture 测过滤逻辑）。",
   "cases": {
     "tests.test_readers.TestReaders.test_cmb_exam": {
       "expect": "pass", "category": "reader/医疗", "fixture": "cmb_exam_medical.jsonl", "samples": 100,
@@ -31,8 +31,8 @@
       "rationale": "纯文本走 read_txt_raw（.txt → medical 生成器）；NFKC 转半角冒号；断言 asst_start='主诉' 与 asst_marker='诊断'（生成器加的小节标题）"
     },
     "tests.test_readers.TestReaders.test_disc_law_alpaca": {
-      "expect": "skip", "category": "reader/法律", "fixture": "disc_law_legal.jsonl", "samples": 100,
-      "rationale": "DISC-Law 下载为 jsonl 但代码找 parquet，当前兜底构造"
+      "expect": "pass", "category": "reader/法律", "fixture": "disc_law_legal.jsonl", "samples": 100,
+      "rationale": "真实 DISC-Law-SFT jsonl（552MB，4个jsonl文件）；instruction/input/output 结构，仅断言结构"
     },
     "tests.test_readers.TestReaders.test_lawbench_qa": {
       "expect": "pass", "category": "reader/法律", "fixture": "lawbench_qa_legal.jsonl", "samples": 100,
@@ -133,8 +133,8 @@
       "rationale": "纯问答无文书结构 → 严格 legal_cn 质量分过低丢弃部分；100 条样本中部分可能过质量分，断言 dropped>=1, drop_reasons 前缀'结构/领域质量分过低'"
     },
     "tests.test_pipeline.TestLegal.test_disc_law_legal_qa_kept": {
-      "expect": "skip", "category": "pipeline/法律", "fixture": "disc_law_legal.jsonl", "samples": 100,
-      "rationale": "DISC-Law 下载为 jsonl 但代码找 parquet，当前兜底构造"
+      "expect": "pass", "category": "pipeline/法律", "fixture": "disc_law_legal.jsonl", "samples": 100,
+      "rationale": "宽松 legal_qa 保留真实 DISC-Law-SFT 100 条；input 可空（Alpaca 常见），仅断言 kept>=1 与结构"
     },
     "tests.test_pipeline.TestLegal.test_lawbench_summary_legal_qa_kept": {
       "expect": "skip", "category": "pipeline/法律", "fixture": "lawbench_summary_legal.jsonl", "samples": 1,

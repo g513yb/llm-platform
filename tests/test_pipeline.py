@@ -101,9 +101,8 @@ class TestLegal(_Base):
         self.assertGreaterEqual(s.dropped, 1)
         self.assertTrue(any(k.startswith("结构/领域质量分过低") for k in s.drop_reasons), s.drop_reasons)
 
-    @unittest.skip("DISC-Law 下载为 jsonl 但代码找 parquet，当前兜底构造")
     def test_disc_law_legal_qa_kept(self):
-        # 真实 DISC-Law-SFT 的 input 可空（Alpaca 常见）；兜底重排 input 非空。不断言 input
+        # 真实 DISC-Law-SFT jsonl；input 可空（Alpaca 常见），仅断言 kept>=1 与结构
         self._assert_rows(self._run("disc_law_legal.jsonl", "legal_qa"))
 
     @unittest.skip("LawBench 无 article+summary 任务，summary 为构造数据")

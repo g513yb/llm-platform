@@ -11,7 +11,7 @@
     "drop_reasons": [],
     "verdict": "pass",
     "quality": "high",
-    "summary": "真实医师考试单选题，选项A-E完整，输出格式统一 答案:X（半角冒号），答案字母在范围内",
+    "summary": "真实医师考试单选题，选项A-E完整，输出格式统一 答案:X",
     "issues": []
   },
   {
@@ -26,7 +26,7 @@
     "drop_reasons": [],
     "verdict": "pass",
     "quality": "high",
-    "summary": "真实临床病例分析，输出含诊断、诊断依据、鉴别诊断等结构化推理，内容专业准确",
+    "summary": "真实临床病例分析，诊断/依据/鉴别诊断结构完整",
     "issues": []
   },
   {
@@ -41,9 +41,9 @@
     "drop_reasons": [],
     "verdict": "pass",
     "quality": "moderate",
-    "summary": "真实医患问答，输出回答病情相关，但源数据有翻译噪声（炼化→消化、中样硬化→粥样硬化等）",
+    "summary": "真实医患问答（多科室合并），源数据有翻译噪声",
     "issues": [
-      "源数据翻译噪声（非pipeline引入）"
+      "源数据翻译噪声"
     ]
   },
   {
@@ -58,7 +58,7 @@
     "drop_reasons": [],
     "verdict": "pass",
     "quality": "high",
-    "summary": "Huatuo-26M-Lite 真实医疗问答，输出回答连贯、医学相关、逻辑清晰",
+    "summary": "Huatuo-26M-Lite 真实医疗问答，回答连贯",
     "issues": []
   },
   {
@@ -73,7 +73,7 @@
     "drop_reasons": [],
     "verdict": "pass",
     "quality": "high",
-    "summary": "从原始病历文本提取主诉/现病史/诊断，结构化输出正确",
+    "summary": "病历结构化提取正确",
     "issues": []
   },
   {
@@ -91,7 +91,7 @@
     ],
     "verdict": "pass",
     "quality": "high",
-    "summary": "严格预设正确过滤：70条缺诊断/主诉被drop，4条结构完整被保留，输出质量高",
+    "summary": "严格预设正确过滤缺诊断/主诉的病例",
     "issues": []
   },
   {
@@ -108,7 +108,7 @@
     ],
     "verdict": "pass",
     "quality": "n/a",
-    "summary": "坏数据正确被拒（缺主诉+诊断）",
+    "summary": "坏数据正确被拒",
     "issues": []
   },
   {
@@ -123,7 +123,7 @@
     "drop_reasons": [],
     "verdict": "pass",
     "quality": "high",
-    "summary": "法律文书纠错任务，输出修正精准（上诉→上述、实施→事实、薪抽→薪酬、苯院→本院），保留原句语义",
+    "summary": "真实LawBench多子任务法律文书纠错，修正精准",
     "issues": []
   },
   {
@@ -132,15 +132,30 @@
     "fixture": "lawbench_qa_legal.jsonl",
     "preset": "legal_cn",
     "total": 100,
-    "kept": 14,
-    "dropped": 86,
-    "output_rows": 14,
+    "kept": 98,
+    "dropped": 2,
+    "output_rows": 98,
     "drop_reasons": [
       "结构/领域质量分过低"
     ],
     "verdict": "pass",
     "quality": "high",
-    "summary": "严格预设过滤86条低分，保留14条有法律文书结构的纠错，修正质量高",
+    "summary": "严格预设过滤低分，保留有法律文书结构的纠错",
+    "issues": []
+  },
+  {
+    "test_id": "test_disc_law_legal_qa_kept",
+    "domain": "法律",
+    "fixture": "disc_law_legal.jsonl",
+    "preset": "legal_qa",
+    "total": 100,
+    "kept": 100,
+    "dropped": 0,
+    "output_rows": 100,
+    "drop_reasons": [],
+    "verdict": "pass",
+    "quality": "high",
+    "summary": "真实DISC-Law-SFT jsonl（552MB），法律咨询问答内容准确",
     "issues": []
   },
   {
@@ -155,7 +170,7 @@
     "drop_reasons": [],
     "verdict": "pass",
     "quality": "high",
-    "summary": "从判决书提取文书类型/案号/本院认为等关键信息，结构化输出正确",
+    "summary": "真实判决书关键信息提取正确",
     "issues": []
   },
   {
@@ -172,7 +187,7 @@
     ],
     "verdict": "pass",
     "quality": "n/a",
-    "summary": "坏判决书正确被拒（必备要素缺失）",
+    "summary": "坏判决书正确被拒",
     "issues": []
   },
   {
@@ -187,7 +202,7 @@
     "drop_reasons": [],
     "verdict": "pass",
     "quality": "high",
-    "summary": "真实金融情感分类数据，输出标签（neutral/positive/moderately negative）与金融新闻语义一致",
+    "summary": "真实金融情感分类，标签与语义一致",
     "issues": []
   },
   {
@@ -204,7 +219,7 @@
     ],
     "verdict": "pass",
     "quality": "n/a",
-    "summary": "情感数据无数值指标，严格预设正确全部过滤",
+    "summary": "情感数据无数值指标，严格预设正确过滤",
     "issues": []
   },
   {
@@ -221,7 +236,7 @@
     ],
     "verdict": "pass",
     "quality": "n/a",
-    "summary": "坏数据正确被拒（无数值指标）",
+    "summary": "坏数据正确被拒",
     "issues": []
   },
   {
@@ -239,7 +254,7 @@
     ],
     "verdict": "pass",
     "quality": "high",
-    "summary": "真实MMLU英文数学题（96条，4条去重drop），输出格式统一 答案:X（半角冒号），答案字母在A-D范围内",
+    "summary": "真实MMLU多学科英文题，格式统一 答案:X",
     "issues": []
   },
   {
@@ -247,14 +262,14 @@
     "domain": "教育",
     "fixture": "cmmlu_education.csv",
     "preset": "education_cn",
-    "total": 4,
-    "kept": 4,
+    "total": 100,
+    "kept": 100,
     "dropped": 0,
-    "output_rows": 4,
+    "output_rows": 100,
     "drop_reasons": [],
     "verdict": "pass",
     "quality": "high",
-    "summary": "真实CMMLU中文农业选择题，输出格式统一 答案:X（半角冒号），答案正确",
+    "summary": "真实CMMLU多学科中文选择题（从4条扩充到100条），格式统一",
     "issues": []
   }
 ]
