@@ -222,7 +222,7 @@ class TestSyntheticData:
         assert s.type_counts.get("选择题") == 4
 
     def test_medqa_run_pipeline(self, tmp_path):
-        import llm_platform.data_pipeline.io as io_mod
+        import data_pipeline.io as io_mod
         io_mod.DATA_DIR = tmp_path
         res = run_pipeline("医疗", [str(SYNTH / "medqa.jsonl")])
         assert res.kept == 3
@@ -266,7 +266,7 @@ def test_real_data_run_pipeline(name, tmp_path):
     path = DL / rel
     if not path.exists():
         pytest.skip(f"真实数据未下载：{rel}")
-    import llm_platform.data_pipeline.io as io_mod
+    import data_pipeline.io as io_mod
     io_mod.DATA_DIR = tmp_path
     res = run_pipeline("医疗", [str(path)])
     assert res.kept > 0, f"{name} kept=0"
