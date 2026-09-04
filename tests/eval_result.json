@@ -47,21 +47,6 @@
     ]
   },
   {
-    "test_id": "test_medqa_medical_qa_kept",
-    "domain": "医疗",
-    "fixture": "medqa_medical.jsonl",
-    "preset": "medical_qa",
-    "total": 100,
-    "kept": 100,
-    "dropped": 0,
-    "output_rows": 100,
-    "drop_reasons": [],
-    "verdict": "pass",
-    "quality": "high",
-    "summary": "CMB-Exam 医学题经 src:cmb_exam 标记，输出格式统一 答案:X，与 cmb_exam 一致",
-    "issues": []
-  },
-  {
     "test_id": "test_huatuo_medical_qa_kept",
     "domain": "医疗",
     "fixture": "huatuo_medical.jsonl",
@@ -155,39 +140,7 @@
     ],
     "verdict": "pass",
     "quality": "high",
-    "summary": "严格预设过滤86条低分，保留14条有法律文书结构的纠错，修正质量高（早成→造成、第十条→第十五条、并费→并非、设会→社会、所再地→所在地）",
-    "issues": []
-  },
-  {
-    "test_id": "test_disc_law_legal_qa_kept",
-    "domain": "法律",
-    "fixture": "disc_law_legal.jsonl",
-    "preset": "legal_qa",
-    "total": 5,
-    "kept": 5,
-    "dropped": 0,
-    "output_rows": 5,
-    "drop_reasons": [],
-    "verdict": "pass",
-    "quality": "high",
-    "summary": "法律领域内构造问答（民法典诉讼时效、劳动法维权、合同解除、借款案例、公司法股东限额），内容准确",
-    "issues": [
-      "领域内fallback构造（非原始DISC-Law数据，因网络不可达）"
-    ]
-  },
-  {
-    "test_id": "test_lawbench_summary_legal_qa_kept",
-    "domain": "法律",
-    "fixture": "lawbench_summary_legal.jsonl",
-    "preset": "legal_qa",
-    "total": 1,
-    "kept": 1,
-    "dropped": 0,
-    "output_rows": 1,
-    "drop_reasons": [],
-    "verdict": "pass",
-    "quality": "high",
-    "summary": "法条核心要义概括准确（盗窃罪构成与法定刑）",
+    "summary": "严格预设过滤86条低分，保留14条有法律文书结构的纠错，修正质量高",
     "issues": []
   },
   {
@@ -221,55 +174,6 @@
     "quality": "n/a",
     "summary": "坏判决书正确被拒（必备要素缺失）",
     "issues": []
-  },
-  {
-    "test_id": "test_raw_legal_contract_legal_cn_kept",
-    "domain": "法律",
-    "fixture": "raw_legal_contract.txt",
-    "preset": "legal_cn",
-    "total": 1,
-    "kept": 1,
-    "dropped": 0,
-    "output_rows": 1,
-    "drop_reasons": [],
-    "verdict": "pass",
-    "quality": "high",
-    "summary": "从合同文本提取甲方/乙方/标的价款/关键条款，结构化输出正确",
-    "issues": []
-  },
-  {
-    "test_id": "test_fineval_mcq_finance_qa_kept",
-    "domain": "金融",
-    "fixture": "fineval_mcq_finance.jsonl",
-    "preset": "finance_qa",
-    "total": 10,
-    "kept": 10,
-    "dropped": 0,
-    "output_rows": 10,
-    "drop_reasons": [],
-    "verdict": "pass",
-    "quality": "high",
-    "summary": "金融领域内构造选择题（市盈率/GDP平减指数/CAPMβ/巴塞尔III/系统性风险），输出含答案+解析，概念准确",
-    "issues": [
-      "领域内fallback构造（原始FinEval为.rar无法解压）"
-    ]
-  },
-  {
-    "test_id": "test_fineval_qa_finance_qa_kept",
-    "domain": "金融",
-    "fixture": "fineval_qa_finance.jsonl",
-    "preset": "finance_qa",
-    "total": 5,
-    "kept": 5,
-    "dropped": 0,
-    "output_rows": 5,
-    "drop_reasons": [],
-    "verdict": "pass",
-    "quality": "high",
-    "summary": "金融领域内构造问答（货币政策三工具/流动性陷阱/费雪效应/委托代理/有效市场假说），解释准确",
-    "issues": [
-      "领域内fallback构造"
-    ]
   },
   {
     "test_id": "test_fingpt_finance_qa_kept",
@@ -321,21 +225,6 @@
     "issues": []
   },
   {
-    "test_id": "test_finance_report_cn_kept",
-    "domain": "金融",
-    "fixture": "finance_report_cn.jsonl",
-    "preset": "finance_cn",
-    "total": 1,
-    "kept": 1,
-    "dropped": 0,
-    "output_rows": 1,
-    "drop_reasons": [],
-    "verdict": "pass",
-    "quality": "high",
-    "summary": "从研报提取营收/净利/增长率等关键指标，输出正确",
-    "issues": []
-  },
-  {
     "test_id": "test_mmlu_cn_kept",
     "domain": "教育",
     "fixture": "mmlu_education.csv",
@@ -350,7 +239,7 @@
     ],
     "verdict": "pass",
     "quality": "high",
-    "summary": "真实MMLU英文数学题（96条，4条去重drop），输出格式统一 答案:X（半角冒号已修复），答案字母在A-D范围内",
+    "summary": "真实MMLU英文数学题（96条，4条去重drop），输出格式统一 答案:X（半角冒号），答案字母在A-D范围内",
     "issues": []
   },
   {
@@ -366,57 +255,6 @@
     "verdict": "pass",
     "quality": "high",
     "summary": "真实CMMLU中文农业选择题，输出格式统一 答案:X（半角冒号），答案正确",
-    "issues": []
-  },
-  {
-    "test_id": "test_educhat_education_qa_kept",
-    "domain": "教育",
-    "fixture": "educhat_education.jsonl",
-    "preset": "education_qa",
-    "total": 1,
-    "kept": 1,
-    "dropped": 0,
-    "output_rows": 1,
-    "drop_reasons": [],
-    "verdict": "pass",
-    "quality": "moderate",
-    "summary": "教育问答（光合作用解释），内容正确但输出偏简短",
-    "issues": [
-      "输出略简短"
-    ]
-  },
-  {
-    "test_id": "test_educhat_education_cn_dropped",
-    "domain": "教育",
-    "fixture": "educhat_education.jsonl",
-    "preset": "education_cn",
-    "total": 1,
-    "kept": 0,
-    "dropped": 1,
-    "output_rows": 0,
-    "drop_reasons": [
-      "缺少选项或答案"
-    ],
-    "verdict": "pass",
-    "quality": "n/a",
-    "summary": "问答数据无选项/答案，严格预设正确过滤",
-    "issues": []
-  },
-  {
-    "test_id": "test_educhat_cn_bad_dropped",
-    "domain": "教育",
-    "fixture": "educhat_education_cn_bad.jsonl",
-    "preset": "education_cn",
-    "total": 1,
-    "kept": 0,
-    "dropped": 1,
-    "output_rows": 0,
-    "drop_reasons": [
-      "缺少选项或答案"
-    ],
-    "verdict": "pass",
-    "quality": "n/a",
-    "summary": "坏数据正确被拒（缺选项或答案）",
     "issues": []
   }
 ]
