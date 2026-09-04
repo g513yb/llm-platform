@@ -1,0 +1,58 @@
+
+> domain-llm-workbench@1.0.0 dev
+> vite
+
+
+  VITE v5.4.21  ready in 345 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://192.168.56.1:5173/
+  ➜  Network: http://192.168.86.1:5173/
+  ➜  Network: http://192.168.134.1:5173/
+  ➜  Network: http://10.63.57.99:5173/
+12:34:43 [vite] hmr update /src/pages/DomainSelect.tsx, /src/pages/Chat.tsx, /src/pages/Datasets.tsx, /src/pages/Workspace.tsx, /src/pages/Compare.tsx, /src/pages/Evaluation.tsx, /src/pages/Training.tsx, /src/pages/Admin.tsx, /src/pages/Overview.tsx
+12:34:47 [vite] hmr update /src/pages/DomainSelect.tsx, /src/pages/Chat.tsx, /src/pages/Datasets.tsx, /src/pages/Workspace.tsx, /src/pages/Compare.tsx, /src/pages/Evaluation.tsx, /src/pages/Training.tsx, /src/pages/Admin.tsx, /src/pages/Overview.tsx
+12:34:48 [vite] hmr update /src/pages/DomainSelect.tsx, /src/pages/Chat.tsx, /src/pages/Datasets.tsx, /src/pages/Workspace.tsx, /src/pages/Compare.tsx, /src/pages/Evaluation.tsx, /src/pages/Training.tsx, /src/pages/Admin.tsx, /src/pages/Overview.tsx
+12:34:49 [vite] hmr update /src/pages/DomainSelect.tsx, /src/pages/Chat.tsx, /src/pages/Datasets.tsx, /src/pages/Workspace.tsx, /src/pages/Compare.tsx, /src/pages/Evaluation.tsx, /src/pages/Training.tsx, /src/pages/Admin.tsx, /src/pages/Overview.tsx
+12:34:51 [vite] hmr update /src/pages/DomainSelect.tsx, /src/pages/Chat.tsx, /src/pages/Datasets.tsx, /src/pages/Workspace.tsx, /src/pages/Compare.tsx, /src/pages/Evaluation.tsx, /src/pages/Training.tsx, /src/pages/Admin.tsx, /src/pages/Overview.tsx
+12:34:52 [vite] hmr update /src/pages/DomainSelect.tsx, /src/pages/Chat.tsx, /src/pages/Datasets.tsx, /src/pages/Workspace.tsx, /src/pages/Compare.tsx, /src/pages/Evaluation.tsx, /src/pages/Training.tsx, /src/pages/Admin.tsx, /src/pages/Overview.tsx
+12:34:53 [vite] hmr update /src/pages/DomainSelect.tsx, /src/pages/Chat.tsx, /src/pages/Datasets.tsx, /src/pages/Workspace.tsx, /src/pages/Compare.tsx, /src/pages/Evaluation.tsx, /src/pages/Training.tsx, /src/pages/Admin.tsx, /src/pages/Overview.tsx
+12:34:55 [vite] hmr update /src/pages/DomainSelect.tsx, /src/pages/Chat.tsx, /src/pages/Datasets.tsx, /src/pages/Workspace.tsx, /src/pages/Compare.tsx, /src/pages/Evaluation.tsx, /src/pages/Training.tsx, /src/pages/Admin.tsx, /src/pages/Overview.tsx
+12:34:55 [vite] hmr update /src/pages/DomainSelect.tsx, /src/pages/Chat.tsx, /src/pages/Datasets.tsx, /src/pages/Workspace.tsx, /src/pages/Compare.tsx, /src/pages/Evaluation.tsx, /src/pages/Training.tsx, /src/pages/Admin.tsx, /src/pages/Overview.tsx
+12:34:56 [vite] hmr update /src/pages/DomainSelect.tsx, /src/pages/Chat.tsx, /src/pages/Datasets.tsx, /src/pages/Workspace.tsx, /src/pages/Compare.tsx, /src/pages/Evaluation.tsx, /src/pages/Training.tsx, /src/pages/Admin.tsx, /src/pages/Overview.tsx
+12:34:57 [vite] hmr update /src/pages/DomainSelect.tsx, /src/pages/Chat.tsx, /src/pages/Datasets.tsx, /src/pages/Workspace.tsx, /src/pages/Compare.tsx, /src/pages/Evaluation.tsx, /src/pages/Training.tsx, /src/pages/Admin.tsx, /src/pages/Overview.tsx
+12:35:25 [vite] hmr update /src/pages/Training.tsx
+12:35:28 [vite] hmr update /src/pages/Training.tsx
+12:35:30 [vite] hmr update /src/pages/Training.tsx
+12:35:31 [vite] hmr update /src/pages/Training.tsx
+12:35:35 [vite] hmr update /src/pages/Training.tsx
+12:35:38 [vite] hmr update /src/pages/Training.tsx
+12:35:38 [vite] hmr update /src/pages/Training.tsx
+12:35:40 [vite] hmr update /src/pages/Training.tsx
+12:35:55 [vite] hmr update /src/pages/Evaluation.tsx
+12:35:58 [vite] hmr update /src/pages/Evaluation.tsx
+12:35:59 [vite] hmr update /src/pages/Evaluation.tsx
+12:36:05 [vite] hmr update /src/pages/Chat.tsx
+12:36:21 [vite] hmr update /src/pages/Admin.tsx
+12:38:34 [vite] hmr update /src/pages/Training.tsx
+12:48:10 [vite] hmr update /src/pages/Chat.tsx
+12:48:26 [vite] hmr update /src/pages/Chat.tsx
+12:48:27 [vite] hmr update /src/pages/Chat.tsx
+13:02:11 [vite] hmr update /src/pages/Training.tsx
+13:02:13 [vite] hmr update /src/pages/Training.tsx
+13:02:20 [vite] hmr update /src/pages/Training.tsx
+13:02:25 [vite] hmr update /src/pages/Training.tsx
+13:02:41 [vite] hmr update /src/pages/Training.tsx
+13:24:44 [vite] hmr update /src/pages/Training.tsx
+13:24:46 [vite] hmr update /src/pages/Chat.tsx
+13:24:49 [vite] hmr update /src/pages/Chat.tsx
+13:24:57 [vite] hmr update /src/pages/Chat.tsx
+13:25:03 [vite] hmr update /src/pages/Chat.tsx
+14:18:02 [vite] hmr update /src/pages/Compare.tsx, /src/pages/Evaluation.tsx
+14:18:12 [vite] hmr update /src/pages/Compare.tsx, /src/pages/Evaluation.tsx
+14:18:25 [vite] hmr update /src/components/StatusBadge.tsx
+14:20:09 [vite] hmr update /src/pages/Training.tsx
+14:21:04 [vite] hmr update /src/pages/Training.tsx
+14:59:13 [vite] hmr update /src/pages/Training.tsx
+14:59:24 [vite] hmr update /src/pages/Training.tsx
+14:59:35 [vite] hmr update /src/pages/Training.tsx
