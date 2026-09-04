@@ -5,6 +5,7 @@ read_all 统一入口，逐条按 schema 优先级尝试 _parse_clin → _parse_
 """
 from __future__ import annotations
 
+import codecs
 import csv
 import json
 from pathlib import Path
@@ -83,7 +84,7 @@ SCHEMAS: dict[str, dict[str, dict]] = {
 
 def _parse_mcq(rec: dict) -> tuple[str, dict[str, str], str, str] | None:
     """从一条记录解析 (question, options, answer_letter, explanation)；失败返回 None。"""
-    q = (rec.get("question") or rec.get("Q") or "").strip()
+    q = (rec.get("question") or rec.get("Question") or rec.get("Q") or "").strip()
     if not q:
         return None
 
@@ -105,7 +106,7 @@ def _parse_mcq(rec: dict) -> tuple[str, dict[str, str], str, str] | None:
 
     # 答案字母：优先 answer_idx/response（明确字母），再 answer（可能是解析文本）
     letter = ""
-    for key in ("answer_idx", "response", "answer"):
+    for key in ("answer_idx", "response", "answer", "Answer"):
         val = rec.get(key)
         if not val:
             continue
@@ -120,11 +121,11 @@ def _parse_mcq(rec: dict) -> tuple[str, dict[str, str], str, str] | None:
 
     # 解析：answer 字段若非简短字母则视为解析文本
     expl = ""
-    ans_val = str(rec.get("answer", "")).strip()
+    ans_val = str(rec.get("answer", "") or rec.get("Answer", "")).strip()
     if ans_val and not (ans_val.upper().lstrip().startswith(letter) and len(ans_val) <= 3):
         expl = ans_val
-    elif rec.get("explanation"):
-        expl = str(rec["explanation"]).strip()
+    elif rec.get("explanation") or rec.get("Explanation"):
+        expl = str(rec.get("explanation") or rec["Explanation"]).strip()
 
     return q, options, letter, expl
 
@@ -138,12 +139,17 @@ def _to_messages(q: str, options: dict[str, str], letter: str, expl: str) -> lis
 
 
 def _sniff_csv_encoding(path: Path) -> str:
-    """读前 4KB 探测 CSV 编码：utf-8-sig 优先，失败回退 gb18030。"""
+    """读前 4KB 探测 CSV 编码：utf-8-sig 优先，失败回退 gb18030。
+
+    用 incremental decoder 避免块截断在多字节字符中间导致误判
+    （final=False 时尾部不完整字节会保留等待下次输入，不报错）。
+    """
     with path.open("rb") as f:
         chunk = f.read(4096)
     for enc in ("utf-8-sig", "gb18030"):
+        decoder = codecs.getincrementaldecoder(enc)()
         try:
-            chunk.decode(enc)
+            decoder.decode(chunk, final=False)
             return enc
         except UnicodeDecodeError:
             continue
@@ -203,6 +209,20 @@ def _parse_clin(rec: dict) -> list[list[dict]]:
     return out
 
 
+def _strip_english_translation(text: str) -> str:
+    """去除中文回答后的英文翻译段（DISC-Law 部分数据有英文翻译残留）。"""
+    paragraphs = text.split("\n\n")
+    kept = []
+    for p in paragraphs:
+        total = len(p.strip())
+        if total > 30:
+            en_chars = sum(1 for c in p if c.isascii() and c.isalpha())
+            if en_chars / total > 0.7:
+                continue
+        kept.append(p)
+    return "\n\n".join(kept).strip()
+
+
 def _parse_qa(rec: dict) -> list[dict] | None:
     """解析问答类记录 -> messages 或 None。
     按 schema 优先级：
@@ -226,13 +246,16 @@ def _parse_qa(rec: dict) -> list[dict] | None:
         ref = rec.get("reference") or []
         if isinstance(ref, list) and ref and ref[0][:30] not in inp:
             inp = "参考法条：\n" + "\n".join(str(r) for r in ref) + "\n\n" + inp
+        out = _strip_english_translation(out)
         return [{"role": "user", "content": inp}, {"role": "assistant", "content": out}]
     # CrimeKG/Huatuo/Toyhom: question/ask + answers[]/response/answer
     # q 可能已被 LawBench 分支设为 question；a 可能已被设为 answer（Toyhom 靠此复用）
     q = (q or (rec.get("ask") or "").strip())
     ans = rec.get("answers") or rec.get("response") or ""
     if isinstance(ans, list) and ans:
-        a = str(ans[0]).strip()
+        # CrimeKG answers 是多段列表（一个完整回答被拆分），拼接还原而非只取首条
+        parts = [str(x).strip() for x in ans if str(x).strip()]
+        a = "\n".join(parts)
     elif isinstance(ans, str) and ans.strip():
         a = ans.strip()
     if q and a:
