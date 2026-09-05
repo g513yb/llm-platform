@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import type { Domain, TrainTask, TaskStatus } from '../types'
 import { BASE_MODEL, MODEL_PATH, FINETUNE_METHOD, QUANT_BITS } from '../data/mock'
@@ -25,13 +25,17 @@ export default function Training() {
   const { domain } = useOutletContext<{ domain: Domain }>()
   const [tasks, setTasks] = useState<TrainTask[]>([])
   const [created, setCreated] = useState(false)
-  const [uploading, setUploading] = useState(false)
-  const [dsInfo, setDsInfo] = useState<{ filename: string; samples: number } | null>(null)
+  const [trainDataset] = useState<{ datasetId: string; label: string; source: string } | null>(() => {
+    try {
+      const raw = sessionStorage.getItem(`train-dataset:${domain.id}`)
+      return raw ? JSON.parse(raw) : null
+    } catch { return null }
+  })
   const [errMsg, setErrMsg] = useState('')
 
   const [form, setForm] = useState({
     name: `${domain.en}-LoRA-r16-e3`,
-    datasetId: '',
+    datasetId: trainDataset?.datasetId || '',
     modelPath: MODEL_PATH,
     rank: '16',
     lr: '2e-4',
@@ -52,36 +56,13 @@ export default function Training() {
     return () => clearInterval(t)
   }, [])
 
-  const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    if (!f) return
-    setUploading(true)
-    setErrMsg('')
-    try {
-      const fd = new FormData()
-      fd.append('file', f)
-      const r = await fetch(`${API_BASE}/api/datasets/upload`, { method: 'POST', body: fd }).then((x) => x.json())
-      if (r.error) {
-        setErrMsg(r.error as string)
-        setDsInfo(null)
-        setForm((s) => ({ ...s, datasetId: '' }))
-        return
-      }
-      setForm((s) => ({ ...s, datasetId: r.datasetId as string }))
-      setDsInfo({ filename: r.filename as string, samples: r.samples as number })
-    } catch {
-      setErrMsg('上传失败：无法连接本地服务')
-    } finally {
-      setUploading(false)
-    }
-  }
 
   const create = async () => {
     if (!form.name.trim()) return
-    if (!form.datasetId) { setErrMsg('请先选择并上传数据集'); return }
+    if (!form.datasetId) { setErrMsg('请先到数据集管理页选择数据集'); return }
     setErrMsg('')
     const taskName = form.name.trim()
-    const datasetLabel = dsInfo ? `${dsInfo.filename}（${dsInfo.samples} 条）` : '本地数据集'
+    const datasetLabel = trainDataset?.label || '本地数据集'
     setCreated(true)
     setTimeout(() => setCreated(false), 3000)
 
@@ -149,11 +130,11 @@ export default function Training() {
             <input id="t-path" value={form.modelPath} onChange={(e) => setForm({ ...form, modelPath: e.target.value })} />
           </div>
           <div className="field">
-            <label>数据集 <span className="hint">选择本地 csv/txt/json/jsonl 文件</span></label>
-            <input type="file" accept=".csv,.txt,.json,.jsonl" onChange={onFile} style={{ fontSize: 12.5 }} />
-            {uploading && <span style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4, display: 'block' }}>上传中……</span>}
-            {dsInfo && !uploading && (
-              <span style={{ fontSize: 12, color: 'var(--ok)', marginTop: 4, display: 'block' }}>✓ {dsInfo.filename} · {dsInfo.samples} 条样本</span>
+            <label>数据集 <span className="hint">由数据集管理页选定</span></label>
+            {trainDataset ? (
+              <input value={trainDataset.label} readOnly style={{ fontSize: 12.5 }} />
+            ) : (
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>请先到「数据集管理」选择数据集（文件导入或参考数据集）</span>
             )}
           </div>
           <div className="grid cols-2" style={{ gap: 12 }}>

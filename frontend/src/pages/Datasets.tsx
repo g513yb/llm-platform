@@ -26,6 +26,11 @@ const fmt = (n: number) => n.toLocaleString('zh-CN')
 
 export default function Datasets() {
   const { domain } = useOutletContext<{ domain: Domain }>()
+  const [chosenId, setChosenId] = useState<string | null>(null)
+  const chooseForTrain = (datasetId: string, label: string, source: 'reference' | 'upload') => {
+    sessionStorage.setItem(`train-dataset:${domain.id}`, JSON.stringify({ datasetId, label, source }))
+    setChosenId(datasetId)
+  }
   const [refDatasets, setRefDatasets] = useState<Dataset[]>([])
   const [selected, setSelected] = useState<Dataset | null>(null)
   useEffect(() => {
@@ -165,6 +170,9 @@ export default function Datasets() {
                     📄 {f}
                   </a>
                 ))}
+                <button className="btn primary" style={{ marginTop: 10 }} onClick={() => { if (inspectRes && processRes) chooseForTrain(inspectRes.datasetId, `${inspectRes.filename}（${processRes.kept} 条）`, 'upload') }} disabled={!!inspectRes && chosenId === inspectRes.datasetId}>
+                  {inspectRes && chosenId === inspectRes.datasetId ? '已选择' : '选择'}
+                </button>
               </div>
             ) : error ? (
               <span style={{ color: 'var(--err)' }}>✗ {error}</span>
@@ -227,7 +235,9 @@ export default function Datasets() {
                   </td>
                   <td className="num" style={{ fontSize: 12, color: 'var(--muted)' }}>{d.updated}</td>
                   <td>
-                    <button className="btn ghost sm">创建训练任务</button>
+                    <button className="btn ghost sm" onClick={() => chooseForTrain(`ref:${d.id}`, `${d.name} ${d.version}`, 'reference')} disabled={chosenId === `ref:${d.id}`}>
+                      {chosenId === `ref:${d.id}` ? '已选择' : '选择'}
+                    </button>
                   </td>
                 </tr>
               ))}
