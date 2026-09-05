@@ -15,6 +15,8 @@ from pydantic import BaseModel
 import uvicorn
 
 import training
+import evaluation
+from eval_runner import DEFAULT_TEST_PATH, DEFAULT_ANSWER_PATH, DEFAULT_GEN_CONFIG
 
 from config import MODEL_NAME
 
@@ -28,6 +30,14 @@ adapter_lock = Lock()
 model_lock = Lock()
 active_adapter = {"id": None, "name": "基座模型"}
 current_model_path = MODEL_PATH
+
+
+def _get_infer_model():
+    """评测任务获取当前推理模型与 tokenizer 的回调。"""
+    ok, err = ensure_model_loaded()
+    if not ok:
+        return None, None
+    return infer_model, tokenizer
 
 _prepare_proc = None
 _prepare_lock = Lock()
@@ -423,6 +433,75 @@ async def chat(req: ChatRequest):
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+# —— 评测接口 ——
+class EvalRequest(BaseModel):
+    name: str = ""
+    adapterId: str | None = None
+    use_cot: bool = True
+    batchSize: int = 1
+    nShot: int = 0
+    testPath: str = ""
+    answerPath: str = ""
+    valPath: str = ""
+
+
+@app.post("/api/eval")
+async def start_eval(req: EvalRequest):
+    """启动评测任务。adapter 切换由前端先调 /api/adapters/load 完成，此处用当前 infer_model。"""
+    ok, err = ensure_model_loaded()
+    if not ok:
+        return {"error": f"模型加载失败：{err}"}
+    if infer_model is None:
+        return {"error": "模型尚未就绪，请先在对话页加载或切换权重"}
+    task_id = f"ev-{uuid.uuid4().hex[:8]}"
+    test_path = req.testPath or str(DEFAULT_TEST_PATH)
+    answer_path = req.answerPath or str(DEFAULT_ANSWER_PATH)
+    val_path = req.valPath or None
+    adapter_label = active_adapter.get("name", "基座模型")
+    evaluation.start_job(
+        task_id,
+        _get_infer_model,
+        test_path,
+        answer_path,
+        req.use_cot,
+        req.batchSize,
+        dict(DEFAULT_GEN_CONFIG),
+        req.adapterId,
+        adapter_label,
+        req.name or f"评测-{adapter_label}",
+        req.nShot,
+        val_path,
+    )
+    return {"taskId": task_id, "name": req.name or f"评测-{adapter_label}"}
+
+
+@app.get("/api/eval/jobs")
+def list_eval_jobs():
+    return evaluation.list_jobs()
+
+
+@app.get("/api/eval/{task_id}/status")
+async def eval_status(task_id: str):
+    return evaluation.get_status(task_id)
+
+
+@app.get("/api/eval/{task_id}/result")
+async def eval_result(task_id: str):
+    return evaluation.get_result(task_id)
+
+
+@app.post("/api/eval/{task_id}/stop")
+def stop_eval(task_id: str):
+    ok = evaluation.stop_job(task_id)
+    return {"ok": ok} if ok else {"error": "任务不存在"}
+
+
+@app.delete("/api/eval/{task_id}")
+def delete_eval(task_id: str):
+    evaluation.delete_job(task_id)
+    return {"ok": True}
 
 
 if __name__ == "__main__":
