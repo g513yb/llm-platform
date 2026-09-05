@@ -1,0 +1,29 @@
+{
+  "domain": "medical",
+  "datasets": [
+    {
+      "id": "cmb-train-alpaca",
+      "name": "CMB 医师考试训练集（Alpaca）",
+      "version": "v1.0.0",
+      "rows": 268855,
+      "updated": "2026-09-05",
+      "quality": 100,
+      "splits": { "train": 98, "val": 1, "test": 1 },
+      "format": "alpaca",
+      "file": "cmb_train_alpaca.jsonl",
+      "source": {
+        "raw": "raw/",
+        "splitScript": "scripts/datasets/medical/json_2_file_deep2_for_val_test_train.py",
+        "convertScript": "scripts/datasets/medical/cmb_train_2_alpaca.py",
+        "checkScript": "scripts/datasets/medical/check_cmb_train_alpaca.py",
+        "note": "CMB-Exam train 合并集按 exam_type/exam_class 拆分小文件入库 → 过滤 C型/空答案/长答案/非字母答案/选项空 → Alpaca"
+      },
+      "steps": [
+        { "label": "格式检查", "fr": "FR-04", "in": 269359, "out": 269359 },
+        { "label": "无效过滤", "fr": "FR-05", "in": 269359, "out": 268855 },
+        { "label": "去重", "fr": "FR-05", "in": 268855, "out": 268855 },
+        { "label": "标注格式化", "fr": "FR-06", "in": 268855, "out": 268855 }
+      ]
+    }
+  ]
+}

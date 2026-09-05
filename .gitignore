@@ -9,8 +9,8 @@ __pycache__/
 .claude/
 .pytest_cache/
 
-# 数据处理生成产物（可能含真实数据，不入库）
-data/
+# 数据处理产物：大 jsonl 可临时生成不入库；但 data/reference/ 下的原始拆分小文件(.json)与 manifest.json 入库溯源
+data/**/*.jsonl
 data/_inbox/
 
 # 下载的原始数据集（download_datasets.py 落盘；云端重建 fixtures 用，不入库）
@@ -36,3 +36,7 @@ frontend/.vite/
 
 # 后端运行时上传目录（training.py 启动时 makedirs 自动创建）
 server/datasets/
+
+# 本地后端虚拟环境与启动日志（start-dev.ps1 生成，不入库）
+.venv-server/
+logs/

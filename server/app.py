@@ -210,6 +210,25 @@ async def get_output_file(filename: str):
     return {"filename": filename, "content": path.read_text(encoding="utf-8")}
 
 
+@app.get("/api/datasets/reference")
+async def reference_datasets(domain: str):
+    """领域参考数据集列表（从 data/reference/{slug}/manifest.json 读取）。
+    框架：每个领域一个 manifest.json，描述其参考数据集元信息；
+    后期扩展只需放数据 + 更新 manifest，前端自动展示。"""
+    from config import DOMAIN_SLUGS, DATA_DIR
+    slug = DOMAIN_SLUGS.get(domain)
+    if not slug:
+        return {"datasets": []}
+    manifest_path = DATA_DIR / "reference" / slug / "manifest.json"
+    if not manifest_path.exists():
+        return {"datasets": []}
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        return {"datasets": data.get("datasets", [])}
+    except Exception as e:
+        return {"error": str(e), "datasets": []}
+
+
 @app.post("/api/train")
 async def start_training(req: TrainRequest):
     global current_model_path

@@ -1,7 +1,6 @@
-import { useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import type { Domain } from '../types'
-import { getBundle } from '../data/mock'
+import type { Dataset, Domain } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 
@@ -27,8 +26,23 @@ const fmt = (n: number) => n.toLocaleString('zh-CN')
 
 export default function Datasets() {
   const { domain } = useOutletContext<{ domain: Domain }>()
-  const b = getBundle(domain.id)
-  const [selected, setSelected] = useState(b.datasets[0])
+  const [refDatasets, setRefDatasets] = useState<Dataset[]>([])
+  const [selected, setSelected] = useState<Dataset | null>(null)
+  useEffect(() => {
+    let alive = true
+    setRefDatasets([])
+    setSelected(null)
+    fetch(`${API_BASE}/api/datasets/reference?domain=${encodeURIComponent(domain.name)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (alive && d.datasets) {
+          setRefDatasets(d.datasets)
+          setSelected(d.datasets[0] ?? null)
+        }
+      })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [domain])
   const [phase, setPhase] = useState<Phase>('idle')
   const [inspectRes, setInspectRes] = useState<InspectResult | null>(null)
   const [processRes, setProcessRes] = useState<ProcessResult | null>(null)
@@ -200,8 +214,10 @@ export default function Datasets() {
               <tr><th>数据集</th><th>版本</th><th>样本数</th><th>质量分</th><th>数据划分</th><th>更新时间</th><th /></tr>
             </thead>
             <tbody>
-              {b.datasets.map((d) => (
-                <tr key={d.id} style={{ cursor: 'pointer', background: selected.id === d.id ? 'color-mix(in srgb, var(--accent) 5%, white)' : undefined }} onClick={() => setSelected(d)}>
+              {refDatasets.length === 0 ? (
+                <tr><td colSpan={7} style={{ color: 'var(--muted)', textAlign: 'center', padding: '18px' }}>暂无参考数据集，可通过上方导入</td></tr>
+              ) : refDatasets.map((d) => (
+                <tr key={d.id} style={{ cursor: 'pointer', background: selected?.id === d.id ? 'color-mix(in srgb, var(--accent) 5%, white)' : undefined }} onClick={() => setSelected(d)}>
                   <td style={{ fontWeight: 600 }}>{d.name}</td>
                   <td><span className="badge num" style={{ fontSize: 11 }}>{d.version}</span></td>
                   <td className="num">{fmt(d.rows)}</td>
@@ -221,6 +237,7 @@ export default function Datasets() {
       </div>
 
       {/* 数据处理流水线（选中数据集） */}
+      {selected && (
       <div className="card">
         <h3>数据处理统计 · {selected.name} <span className="num" style={{ fontSize: 12, color: 'var(--faint)' }}>{selected.version}</span></h3>
         <p className="card-sub">FR-05 / FR-06 / FR-07 / FR-21 · 清洗 → 去重 → 质量过滤 → 标注格式化，记录各环节数据量变化</p>
@@ -248,6 +265,7 @@ export default function Datasets() {
           处理结果已随版本 <span className="num">{selected.version}</span> 固化，可追溯。
         </div>
       </div>
+      )}
 
       {fileViewer && (
         <div
