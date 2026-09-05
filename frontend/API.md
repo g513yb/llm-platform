@@ -402,6 +402,21 @@ data: {"messageId": "msg-88", "time": "10:25"}
 
 **`dims` 固定 6 项**，顺序与 2.5 节评测维度一致；`composite` 为六项综合分（0-100 整数），由后端按权重计算（FR-19）。评测为异步任务，运行中任务本接口同样返回，前端轮询至 `完成` / `失败`。
 
+#### 当前实现接口（无版本前缀，与训练/对话接口一致）
+
+评测基于 CMB-Exam 选择题测试集（11200 题）+ `CMB-test-choice-answer.json` 答案比对，按 `exam_type → exam_class` 分层统计准确率。移植自 `tests/fixtures/_downloads/CMB`，完整重现 12 项处理细节（见 `server/eval_runner.py` 头注释）。
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| POST | `/api/eval` | 启动评测。body：`{name?, adapterId?, use_cot=true, batchSize=1, testPath?, answerPath?}`。adapter 切换由前端先调 `/api/adapters/load` 完成。返回 `{taskId, name}` |
+| GET | `/api/eval/jobs` | 评测任务列表。每项含 `id/name/status/progress/message/adapter/adapterId/use_cot/total/correct/overall/composite/started` |
+| GET | `/api/eval/{taskId}/status` | 单任务状态 |
+| GET | `/api/eval/{taskId}/result` | 结果详情：`{composite, result:{overall, correct, total, per_category, per_subcategory, wrong_items[], wrong_truncated}}` |
+| POST | `/api/eval/{taskId}/stop` | 终止 |
+| DELETE | `/api/eval/{taskId}` | 删除（同时清 `data/eval/{taskId}/`） |
+
+结果落盘 `data/eval/{taskId}/result.json` + `answers.jsonl`。`per_category` 父类准确率 = 子类算术平均（非总数比）；`wrong_items` 截断前 200 条。
+
 ---
 
 ### 3.7 跨领域对比模块
