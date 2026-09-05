@@ -2,7 +2,10 @@ import gc
 import json
 import os
 import shutil
+import subprocess
+import sys
 import uuid
+from pathlib import Path
 from threading import Lock, Thread
 
 from fastapi import FastAPI, File, UploadFile, Form
@@ -25,6 +28,9 @@ adapter_lock = Lock()
 model_lock = Lock()
 active_adapter = {"id": None, "name": "基座模型"}
 current_model_path = MODEL_PATH
+
+_prepare_proc = None
+_prepare_lock = Lock()
 
 
 def ensure_model_loaded():
@@ -227,6 +233,65 @@ async def reference_datasets(domain: str):
         return {"datasets": data.get("datasets", [])}
     except Exception as e:
         return {"error": str(e), "datasets": []}
+
+
+def _scan_prepare_status():
+    """扫描 data/reference/*/manifest.json，返回各数据集结果文件就绪情况。"""
+    from config import DATA_DIR
+    ready, missing = [], []
+    ref_root = DATA_DIR / "reference"
+    if not ref_root.exists():
+        return ready, missing
+    for manifest in sorted(ref_root.glob("*/manifest.json")):
+        domain = manifest.parent.name
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        for ds in data.get("datasets", []):
+            item = {"domain": domain, "id": ds.get("id", ""), "name": ds.get("name", "")}
+            if (manifest.parent / ds["file"]).exists():
+                ready.append(item)
+            else:
+                missing.append(item)
+    return ready, missing
+
+
+@app.post("/api/datasets/prepare")
+async def prepare_reference_datasets():
+    """异步触发 prepare_datasets.py 补齐缺失的结果文件。已在跑则直接返回。"""
+    global _prepare_proc
+    from config import PROJECT_ROOT
+    with _prepare_lock:
+        if _prepare_proc is not None and _prepare_proc.poll() is None:
+            return {"status": "running"}
+        script = PROJECT_ROOT / "scripts" / "prepare_datasets.py"
+        if not script.exists():
+            return {"status": "error", "error": "prepare_datasets.py 不存在"}
+        _prepare_proc = subprocess.Popen(
+            [sys.executable, str(script)],
+            cwd=str(PROJECT_ROOT),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    return {"status": "running"}
+
+
+@app.get("/api/datasets/prepare/status")
+async def prepare_status():
+    """查询结果数据准备状态：进程状态 + 各数据集就绪/缺失。"""
+    global _prepare_proc
+    with _prepare_lock:
+        if _prepare_proc is None:
+            proc_status = "idle"
+        elif _prepare_proc.poll() is None:
+            proc_status = "running"
+        elif _prepare_proc.returncode == 0:
+            proc_status = "done"
+        else:
+            proc_status = "error"
+    ready, missing = _scan_prepare_status()
+    return {"status": proc_status, "ready": ready, "missing": missing}
 
 
 @app.post("/api/train")

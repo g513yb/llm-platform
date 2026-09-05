@@ -48,6 +48,22 @@ export default function Datasets() {
       .catch(() => {})
     return () => { alive = false }
   }, [domain])
+  const [prepareStatus, setPrepareStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
+  const [prepareMissingCount, setPrepareMissingCount] = useState(0)
+  useEffect(() => {
+    fetch(`${API_BASE}/api/datasets/prepare`, { method: 'POST' }).catch(() => {})
+    const t = setInterval(() => {
+      fetch(`${API_BASE}/api/datasets/prepare/status`)
+        .then((r) => r.json())
+        .then((d) => {
+          setPrepareStatus(d.status)
+          setPrepareMissingCount(d.missing?.length ?? 0)
+          if (d.status !== 'running') clearInterval(t)
+        })
+        .catch(() => {})
+    }, 3000)
+    return () => clearInterval(t)
+  }, [])
   const [phase, setPhase] = useState<Phase>('idle')
   const [inspectRes, setInspectRes] = useState<InspectResult | null>(null)
   const [processRes, setProcessRes] = useState<ProcessResult | null>(null)
@@ -127,6 +143,25 @@ export default function Datasets() {
       <p className="page-sub">
         导入领域语料，执行格式检查、清洗、去重、质量过滤与标注格式化，并以版本形式沉淀，供训练任务精确引用。
       </p>
+
+      {prepareStatus === 'running' && (
+        <div className="card" style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, borderColor: 'var(--accent)' }}>
+          <span style={{ color: 'var(--accent)', fontWeight: 600 }}>⟳ 结果数据准备中…</span>
+          <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>正在生成训练用 Alpaca 文件，完成后即可选择数据集</span>
+        </div>
+      )}
+      {prepareStatus === 'error' && (
+        <div className="card" style={{ padding: '10px 16px', borderColor: 'var(--err)' }}>
+          <span style={{ color: 'var(--err)', fontWeight: 600 }}>✗ 结果数据准备失败</span>
+          <span style={{ fontSize: 12.5, color: 'var(--muted)', marginLeft: 8 }}>请手动运行 scripts/prepare_datasets.py</span>
+        </div>
+      )}
+      {prepareStatus === 'done' && prepareMissingCount > 0 && (
+        <div className="card" style={{ padding: '10px 16px', borderColor: 'var(--warn)' }}>
+          <span style={{ color: 'var(--warn)', fontWeight: 600 }}>⚠ {prepareMissingCount} 个数据集结果文件缺失</span>
+          <span style={{ fontSize: 12.5, color: 'var(--muted)', marginLeft: 8 }}>可手动运行 scripts/prepare_datasets.py 补齐</span>
+        </div>
+      )}
 
       {/* 导入 */}
       <div className="card">
@@ -235,7 +270,7 @@ export default function Datasets() {
                   </td>
                   <td className="num" style={{ fontSize: 12, color: 'var(--muted)' }}>{d.updated}</td>
                   <td>
-                    <button className="btn ghost sm" onClick={() => chooseForTrain(`ref:${d.id}`, `${d.name} ${d.version}`, 'reference')} disabled={chosenId === `ref:${d.id}`}>
+                    <button className="btn ghost sm" onClick={() => chooseForTrain(`ref:${d.id}`, `${d.name} ${d.version}`, 'reference')} disabled={chosenId === `ref:${d.id}` || prepareStatus === 'running'}>
                       {chosenId === `ref:${d.id}` ? '已选择' : '选择'}
                     </button>
                   </td>
