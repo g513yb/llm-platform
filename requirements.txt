@@ -1,4 +1,4 @@
-# —— 运行所需（FastAPI 后端 + LoRA 训练）——
+# —— 运行所需（FastAPI 后端 + LoRA 训练 + 数据处理）——
 # AutoDL 镜像通常已自带 CUDA 版 torch，请勿重装；如确实缺失，取消下行注释并指定 CUDA 版
 # torch>=2.1
 transformers==4.53.1
@@ -11,10 +11,9 @@ safetensors==0.4.5
 fastapi>=0.119
 uvicorn>=0.52
 
-# —— LoRA 微调 + 4bit 量化（server/training.py 使用）——
+# —— LoRA 微调 + 4bit/8bit 量化（server/training.py 使用）——
 peft>=0.13.2
 bitsandbytes>=0.50
 
-# —— 后续 Sprint（本期不装）——
-# datasets==3.1.0     # 数据处理
-# evaluate==0.4.3     # 多维度评测
+# —— 数据处理（server/data_pipeline/readers.py 读 parquet 用，惰性导入）——
+pandas>=2.0

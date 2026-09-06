@@ -2,7 +2,7 @@
 
 基于 **PyTorch + HuggingFace Transformers + PEFT(LoRA)** 的多领域大模型训练与评测平台。核心是一条完整闭环：**选领域 → 处理数据 → LoRA 微调 → 保存权重 → 复用对话 → 多维度评测 → 跨领域对比**。
 
-> 当前进度：**Sprint 0 + Sprint 1 已完成**（工作台 + Qwen 流式对话 + 数据处理）；训练/权重/评测为后续 Sprint。
+> 当前进度：**Sprint 0-5 全部完成**（工作台 + 流式对话 + 数据处理 + LoRA 训练 + 权重管理 + CMB-Exam 评测）；跨领域对比页为后续 Sprint。
 >
 > 📄 开发环境、部署链路与全部配置项见 **[docs/开发环境配置说明.md](./docs/开发环境配置说明.md)**。
 > 📄 支持的数据集与获取/字段用法见 **[docs/DATASETS.md](./docs/DATASETS.md)**。
@@ -13,9 +13,9 @@
 ┌─ React 工作台（顶部选领域 → 进入工作台）
 │   ├─ 对话        ✅ 加载 Qwen2.5-7B-Instruct，多轮对话 + 逐字流式（需 GPU）
 │   ├─ 数据处理    ✅ 上传语料 → schema 自动识别 → Alpaca 落盘 + 统计
-│   ├─ LoRA训练    ⏳ 占位（后续 Sprint）
-│   ├─ 权重管理    ⏳ 占位（后续 Sprint）
-│   └─ 多维度评测  ⏳ 占位（后续 Sprint）
+│   ├─ LoRA训练    ✅ 4bit 量化 + LoRA 微调，云端 4090 24GB 跑 Qwen2.5-7B，任务管理 + Loss 曲线
+│   ├─ 权重管理    ✅ 训练完成落盘 adapters/，热切换 + 复用对话/评测
+│   └─ 多维度评测  ✅ CMB-Exam 选择题评测（11200 题），分层计分 + few-shot + 雷达图
 └─ 服务层（纯 CPU，不挂卡可跑）
     └─ data_pipeline/   读入 → schema 自动识别 → messages → Alpaca 落盘
 ```
@@ -37,6 +37,23 @@
 - **统计**：总数/保留/丢弃 + 类型分布 + 前 20 条预览
 - **后端端点**：`POST /api/datasets/upload`（inspect 轻量识别不落盘）、`POST /api/datasets/process`（run_pipeline 落盘）、`GET /api/datasets/output/{filename}`（查看输出文件）
 
+### Sprint 3 · LoRA 微调 + 权重保存
+- **量化可切**：按 `config.TRAIN_QUANTIZATION`（4bit/8bit/none）选训练量化，4bit/8bit 走 `prepare_model_for_kbit_training` + LoRA，none 走 bf16/fp16 全精度。本地 4070 8GB + Qwen2.5-3B-Instruct 4bit QLoRA；云端 4090 24GB + Qwen2.5-7B-Instruct。
+- **任务管理**：`JOBS` dict + `jobs.json` 持久化，线程异步训练，服务重启时运行中任务标记"已终止"。
+- **权重落盘**：训练完成落盘 `server/adapters/<task_id>/`，`index.json` 登记。
+- **前端**：`Training.tsx` 接 `/api/train` 真接口（创建/列表/状态/停止/删除 + LossCurve）。
+- **并发保护**：禁止同时跑多个训练任务，前后端双重防护（按钮禁用 + 后端状态检查）防显存 OOM。
+
+### Sprint 4 · 权重复用对话
+- **权重管理端点**：`/api/adapters`（列表）、`/api/adapters/active`（当前）、`/api/adapters/load`（热切换）。
+- **复用 infer_model**：对话/评测共用 `infer_model`，切权重时加 `adapter_lock` 串行避免冲突。
+
+### Sprint 5 · CMB-Exam 多维度评测
+- **评测核心**：`eval_runner.py` 完整重现 CMB 12 项处理细节（option_str 过滤、两步 format、左 padding 切 prompt、多采样投票、match_choice 正则回退、父类准确率=子类算术平均等）。
+- **任务管理**：`evaluation.py` 仿训练任务管理，复用 `infer_model`，支持 few-shot（从 `cmb_val_merge.json` 选示例）。
+- **默认评测数据**：`data/reference/medical/eval/`（11200 题）。
+- **前端**：`Evaluation.tsx` 接 `/api/eval` 真接口（创建/列表/结果/停止/删除 + RadarChart/ScoreRing），评测前先 `/api/adapters/load` 切权重。
+
 ## 目录结构
 
 ```
@@ -45,7 +62,9 @@ llm-platform/
 │   ├── app.py                 # 入口：模型加载 + LoRA 推理/训练 + 流式对话（MODEL_NAME/PORT env 可覆盖）
 │   ├── config.py              # 唯一配置源：MODEL_NAME / DOMAINS / DOMAIN_SLUGS / DATA_DIR / ...
 │   ├── domain.py              # 领域注册表：labels / describe / slug
-│   ├── training.py            # LoRA 训练任务管理
+│   ├── training.py            # LoRA 训练任务管理（SFTDataset + JOBS + jobs.json + 线程异步）
+│   ├── evaluation.py          # 评测任务管理（仿 training，复用 infer_model）
+│   ├── eval_runner.py         # CMB-Exam 评测核心（12 项处理细节 + 分层计分）
 │   ├── chat.py                # 对话管线
 │   ├── model_manager.py       # 模型懒加载
 │   ├── data_pipeline/         # 数据处理门面（极简三文件）
@@ -153,6 +172,7 @@ print(res.kept, res.dropped, res.type_counts, res.output_files)   # 落盘 data/
 |---|---|---|
 | 0 | 工作台 + Qwen 流式对话 | ✅ 完成 |
 | 1 | 数据处理 + 12 种数据集 schema + Alpaca 输出 | ✅ 完成 |
-| 3 | LoRA 微调 + 自动保存权重 | ⏳ 占位 |
-| 4 | 权重复用对话 + 多轮记忆加强 | ⏳ 占位 |
-| 5 | 多维度评测 + 跨领域对比 | ⏳ 占位 |
+| 3 | LoRA 微调 + 自动保存权重 | ✅ 完成 |
+| 4 | 权重复用对话 + 多轮记忆加强 | ✅ 完成 |
+| 5 | 多维度评测（CMB-Exam） | ✅ 完成 |
+| 6 | 跨领域对比 | ⏳ 占位 |
