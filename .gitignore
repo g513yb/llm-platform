@@ -40,3 +40,7 @@ server/datasets/
 # 本地后端虚拟环境与启动日志（start-dev.ps1 生成，不入库）
 .venv-server/
 logs/
+
+# 模型权重与 HuggingFace 缓存（大文件，各机器自行下载/挂载，不入库）
+hf/
+models/
