@@ -18,7 +18,7 @@ import training
 import evaluation
 from eval_runner import DEFAULT_TEST_PATH, DEFAULT_ANSWER_PATH, DEFAULT_GEN_CONFIG
 
-from config import MODEL_NAME, QUANTIZATION, DEFAULT_DEVICE_MAP, MODEL_SHORT_NAME, MODELS_DIR
+from config import MODEL_NAME, QUANTIZATION, TRAIN_QUANTIZATION, DEFAULT_DEVICE_MAP, MODEL_SHORT_NAME, MODELS_DIR
 
 MODEL_PATH = MODEL_NAME
 PORT = int(os.environ.get("PORT", "8000"))
@@ -147,7 +147,7 @@ app.add_middleware(
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "model": MODEL_SHORT_NAME, "quant": QUANTIZATION, "ready": infer_model is not None}
+    return {"status": "ok", "model": MODEL_SHORT_NAME, "quant": QUANTIZATION, "trainQuant": TRAIN_QUANTIZATION, "ready": infer_model is not None}
 
 
 @app.get("/api/models")

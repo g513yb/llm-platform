@@ -27,7 +27,7 @@ export default function Training() {
   const [tasks, setTasks] = useState<TrainTask[]>([])
   const [created, setCreated] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [health, setHealth] = useState<{ model: string; quant: string }>({ model: BASE_MODEL, quant: QUANT_BITS })
+  const [health, setHealth] = useState<{ model: string; quant: string; trainQuant: string }>({ model: BASE_MODEL, quant: QUANT_BITS, trainQuant: QUANT_BITS })
   const [modelList, setModelList] = useState<{ name: string; path: string }[]>([])
   const [trainDataset] = useState<{ datasetId: string; label: string; source: string } | null>(() => {
     try {
@@ -56,7 +56,7 @@ export default function Training() {
 
   useEffect(() => {
     fetch(`${API_BASE}/api/health`).then((x) => x.json()).then((h) => {
-      if (h.model) setHealth({ model: h.model, quant: h.quant || QUANT_BITS })
+      if (h.model) setHealth({ model: h.model, quant: h.quant || QUANT_BITS, trainQuant: h.trainQuant || QUANT_BITS })
     }).catch(() => {})
     fetch(`${API_BASE}/api/models`).then((x) => x.json()).then((m) => {
       if (Array.isArray(m.models)) {
@@ -132,7 +132,7 @@ export default function Training() {
     <div>
       <h1 className="page-title display">模型训练</h1>
       <p className="page-sub">
-        基于基座模型 {health.model}（LoRA · {health.quant} 量化，模型/量化由后端配置驱动），选择数据集版本并调整超参数创建训练任务。任务在后台执行（FR-09 ~ FR-12），完成后领域权重自动入库。
+        基于基座模型 {health.model}（LoRA · {health.trainQuant} 量化，模型/量化由后端配置驱动），选择数据集版本并调整超参数创建训练任务。任务在后台执行（FR-09 ~ FR-12），完成后领域权重自动入库。
       </p>
 
       <div className="grid cols-2">
@@ -167,7 +167,7 @@ export default function Training() {
           <div className="grid cols-2" style={{ gap: 12 }}>
             <div className="field">
               <label>微调方法 <span className="hint">固定，不支持选择</span></label>
-              <input value={`${FINETUNE_METHOD} · ${health.quant} 量化`} readOnly />
+              <input value={`${FINETUNE_METHOD} · ${health.trainQuant} 量化`} readOnly />
             </div>
             <div className="field">
               <label htmlFor="t-rank">秩 (r)</label>
@@ -216,7 +216,7 @@ export default function Training() {
             <div>
               <div className="eyebrow" style={{ color: 'var(--faint)' }}>基座模型</div>
               <div style={{ fontSize: 13, marginTop: 6, fontWeight: 600 }}>
-                {health.model} <span className="badge" style={{ marginLeft: 6 }}>LoRA·{health.quant}</span>
+                {health.model} <span className="badge" style={{ marginLeft: 6 }}>LoRA·{health.trainQuant}</span>
               </div>
             </div>
           </div>
