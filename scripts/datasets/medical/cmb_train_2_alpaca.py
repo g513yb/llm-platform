@@ -13,7 +13,7 @@ DST = DST_DIR / "cmb_train_alpaca.jsonl"
 ANSWER_RE = re.compile(r"^[A-F]+$")
 OPTION_KEYS = ["A", "B", "C", "D", "E", "F"]
 
-TARGET = 50_000
+TARGET = 30_000
 SEED = 42
 
 

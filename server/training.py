@@ -24,6 +24,8 @@ MAX_LEN = 512
 INDEX_PATH = os.path.join(ADAPTER_DIR, "index.json")
 JOBS_PATH = os.path.join(BASE_DIR, "jobs.json")
 
+REAL_BATCH = int(os.environ.get("TRAIN_REAL_BATCH", "1"))
+
 
 def _save_jobs():
     try:
@@ -192,10 +194,11 @@ def run_training(task_id, dataset_path, rank, lr, epochs, batch, name, domain, d
         ds = SFTDataset(samples, tokenizer)
         if len(ds) == 0:
             raise ValueError("数据集解析后无可用样本（可能字段不匹配）")
-        accum = max(1, batch)
+        real_bs = max(1, min(REAL_BATCH, batch))
+        accum = max(1, batch // real_bs)
         loader = DataLoader(
             ds,
-            batch_size=1,
+            batch_size=real_bs,
             shuffle=True,
             collate_fn=functools.partial(_collate, pad_id=tokenizer.pad_token_id),
         )

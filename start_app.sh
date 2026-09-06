@@ -14,6 +14,9 @@ export MODELS_DIR="${MODELS_DIR:-/root/autodl-tmp/llm-platform/models}"
 export QUANTIZATION="${QUANTIZATION:-none}"
 export TRAIN_QUANTIZATION="${TRAIN_QUANTIZATION:-none}"
 
+# 训练真实批大小（4090 24GB + 7B bf16 + MAX_LEN=512 可放 batch=4；本地 4070 8GB 不设此变量，默认 1 走累积）
+export TRAIN_REAL_BATCH="${TRAIN_REAL_BATCH:-4}"
+
 source /root/miniconda3/etc/profile.d/conda.sh 2>/dev/null && conda activate base
 
 pkill -f "python app.py" 2>/dev/null || true   # 干掉旧实例（若有）
