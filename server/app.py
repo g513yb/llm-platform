@@ -239,7 +239,8 @@ async def reference_datasets(domain: str):
         return {"datasets": []}
     try:
         data = json.loads(manifest_path.read_text(encoding="utf-8"))
-        return {"datasets": data.get("datasets", [])}
+        train_datasets = [ds for ds in data.get("datasets", []) if ds.get("purpose", "train") == "train"]
+        return {"datasets": train_datasets}
     except Exception as e:
         return {"error": str(e), "datasets": []}
 
