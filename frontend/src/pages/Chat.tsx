@@ -14,8 +14,9 @@ export default function Chat() {
   const [activeId, setActiveId] = useState(sessions[0].id)
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
-  const [adapters, setAdapters] = useState<{ id: string; name: string; loss: number }[]>([])
+  const [adapters, setAdapters] = useState<{ id: string; name: string; loss: number; domain?: string }[]>([])
   const [activeAdapter, setActiveAdapter] = useState<{ id: string | null; name: string }>({ id: null, name: '基座模型' })
+  const [trainRunning, setTrainRunning] = useState(false)
   const logRef = useRef<HTMLDivElement>(null)
 
   const active = sessions.find((s) => s.id === activeId)!
@@ -29,6 +30,15 @@ export default function Chat() {
     load()
     fetch(`${API_BASE}/api/adapters/active`).then((r) => r.json()).then(setActiveAdapter).catch(() => {})
     const t = setInterval(load, 8000)
+    return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    const check = () => fetch(`${API_BASE}/api/train/jobs`).then((r) => r.json()).then((list: unknown[]) => {
+      if (Array.isArray(list)) setTrainRunning(list.some((j) => { const s = (j as Record<string, unknown>).status; return s === '运行中' || s === '等待' }))
+    }).catch(() => {})
+    check()
+    const t = setInterval(check, 3000)
     return () => clearInterval(t)
   }, [])
 
@@ -48,6 +58,7 @@ export default function Chat() {
   const send = async () => {
     const text = input.trim()
     if (!text || thinking) return
+    if (trainRunning) return
     setInput('')
     setThinking(true)
     const userMsg: ChatMsg = { role: 'user', content: text, time: now() }
@@ -149,13 +160,18 @@ export default function Chat() {
             <span style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
               <select value={activeAdapter.id ?? ''} onChange={onAdapterChange} style={{ fontSize: 12 }} title="选择领域权重">
                 <option value="">基座模型（无微调）</option>
-                {adapters.map((a) => <option key={a.id} value={a.id}>{a.name}（loss {Number(a.loss).toFixed(2)}）</option>)}
+                {adapters.filter((a) => !a.domain || a.domain === domain.name).map((a) => <option key={a.id} value={a.id}>{a.name}（loss {Number(a.loss).toFixed(2)}）</option>)}
               </select>
               <span className="rail-meta">{domain.name}领域</span>
             </span>
           </div>
 
           <div className="chat-log" ref={logRef}>
+            {trainRunning && (
+              <div style={{ background: 'color-mix(in srgb, var(--warn) 12%, white)', color: 'var(--warn)', padding: '8px 12px', borderRadius: 8, fontSize: 12.5, marginBottom: 8 }}>
+                ⚠ 训练任务进行中，推理模型已释放，对话暂不可用，请等训练完成。
+              </div>
+            )}
             {active.messages.length === 0 && (
               <div className="empty">
                 <b>开始与 {domain.name}领域模型对话</b>

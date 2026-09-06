@@ -303,13 +303,38 @@ async def prepare_status():
     return {"status": proc_status, "ready": ready, "missing": missing}
 
 
+def _resolve_dataset_path(dataset_id: str, domain: str) -> str | None:
+    """解析训练数据集路径：ref: 前缀走 manifest，否则走上传目录前缀匹配。"""
+    if dataset_id.startswith("ref:"):
+        from config import DOMAIN_SLUGS, DATA_DIR
+        slug = DOMAIN_SLUGS.get(domain)
+        if not slug:
+            return None
+        ref_id = dataset_id[4:]
+        manifest_path = DATA_DIR / "reference" / slug / "manifest.json"
+        if not manifest_path.exists():
+            return None
+        try:
+            data = json.loads(manifest_path.read_text(encoding="utf-8"))
+            for ds in data.get("datasets", []):
+                if ds.get("id") == ref_id and ds.get("file"):
+                    p = manifest_path.parent / ds["file"]
+                    return str(p) if p.exists() else None
+        except Exception:
+            return None
+        return None
+    files = [f for f in os.listdir(training.DATASET_DIR) if f.startswith(dataset_id + "_")]
+    if not files:
+        return None
+    return os.path.join(training.DATASET_DIR, files[0])
+
+
 @app.post("/api/train")
 async def start_training(req: TrainRequest):
     global current_model_path
-    files = [f for f in os.listdir(training.DATASET_DIR) if f.startswith(req.datasetId + "_")]
-    if not files:
-        return {"error": "数据集不存在，请先上传"}
-    dataset_path = os.path.join(training.DATASET_DIR, files[0])
+    dataset_path = _resolve_dataset_path(req.datasetId, req.domain)
+    if not dataset_path:
+        return {"error": "数据集不存在，请先在数据集管理页选择数据集"}
     model_path = req.modelPath.strip() or MODEL_PATH
     current_model_path = model_path
     task_id = f"tk-{uuid.uuid4().hex[:8]}"

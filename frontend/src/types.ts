@@ -41,6 +41,7 @@ export interface TrainTask {
   started: string
   curve: number[]
   message?: string
+  domain?: string
 }
 
 export interface DomainModel {

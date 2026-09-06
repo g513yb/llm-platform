@@ -19,6 +19,7 @@ const mapJob = (j: Record<string, unknown>): TrainTask => ({
   started: (j.started as string) || '',
   curve: (j.loss_history as number[]) || [],
   message: (j.message as string) || '',
+  domain: (j.domain as string) || '',
 })
 
 export default function Training() {
@@ -60,6 +61,12 @@ export default function Training() {
   const create = async () => {
     if (!form.name.trim()) return
     if (!form.datasetId) { setErrMsg('请先到数据集管理页选择数据集'); return }
+    const lrNum = parseFloat(form.lr)
+    if (isNaN(lrNum) || lrNum <= 0) { setErrMsg('学习率必须为正数'); return }
+    const epochsNum = parseInt(form.epochs)
+    if (isNaN(epochsNum) || epochsNum < 1) { setErrMsg('训练轮数须为 ≥1 的整数'); return }
+    const batchNum = parseInt(form.batch)
+    if (isNaN(batchNum) || batchNum < 1) { setErrMsg('批大小须为 ≥1 的整数'); return }
     setErrMsg('')
     const taskName = form.name.trim()
     const datasetLabel = trainDataset?.label || '本地数据集'
@@ -103,7 +110,8 @@ export default function Training() {
     } catch { /* ignore */ }
   }
 
-  const latest = tasks[0]
+  const visibleTasks = tasks.filter((t) => !t.domain || t.domain === domain.name)
+  const latest = visibleTasks[0]
 
   return (
     <div>
@@ -127,7 +135,7 @@ export default function Training() {
           </div>
           <div className="field">
             <label htmlFor="t-path">模型路径 <span className="hint">本地权重位置，可自行指定</span></label>
-            <input id="t-path" value={form.modelPath} onChange={(e) => setForm({ ...form, modelPath: e.target.value })} />
+            <input id="t-path" value={form.modelPath} placeholder="留空使用云端默认模型" onChange={(e) => setForm({ ...form, modelPath: e.target.value })} />
           </div>
           <div className="field">
             <label>数据集 <span className="hint">由数据集管理页选定</span></label>
@@ -193,6 +201,11 @@ export default function Training() {
               </div>
             </div>
           </div>
+          {latest && latest.status === '完成' && (
+            <div style={{ marginTop: 12, fontSize: 12.5, color: 'var(--ok)', background: 'color-mix(in srgb, var(--ok) 8%, white)', padding: '8px 12px', borderRadius: 8 }}>
+              ✓ 权重已入库，可前往「对话」页加载该权重推理，或在「评测」页发起评测。
+            </div>
+          )}
         </div>
       </div>
 
@@ -206,7 +219,7 @@ export default function Training() {
               <tr><th>任务</th><th>基础模型</th><th>数据集版本</th><th>状态</th><th style={{ width: 180 }}>进度</th><th>启动时间</th><th style={{ width: 120 }}>操作</th></tr>
             </thead>
             <tbody>
-              {tasks.map((t) => (
+              {visibleTasks.map((t) => (
                 <tr key={t.id}>
                   <td className="num" style={{ fontSize: 12.5 }}>{t.name}</td>
                   <td>{t.baseModel}</td>
@@ -239,9 +252,9 @@ export default function Training() {
               ))}
             </tbody>
           </table>
-          {tasks.length === 0 && <div className="empty" style={{ padding: '16px 0', textAlign: 'center' }}>暂无训练任务</div>}
+          {visibleTasks.length === 0 && <div className="empty" style={{ padding: '16px 0', textAlign: 'center' }}>暂无训练任务</div>}
         </div>
-        {tasks.filter((t) => t.status === '失败' || t.status === '已终止').map((t) => (
+        {visibleTasks.filter((t) => t.status === '失败' || t.status === '已终止').map((t) => (
           <div key={t.id} className="login-error" style={{ marginTop: 14 }}>
             任务 <b className="num">{t.name}</b> {t.status === '已终止' ? '已终止' : '失败'}：{t.message || '详情未知'}
           </div>

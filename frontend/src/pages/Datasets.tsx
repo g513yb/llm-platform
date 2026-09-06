@@ -205,7 +205,7 @@ export default function Datasets() {
                     📄 {f}
                   </a>
                 ))}
-                <button className="btn primary" style={{ marginTop: 10 }} onClick={() => { if (inspectRes && processRes) chooseForTrain(inspectRes.datasetId, `${inspectRes.filename}（${processRes.kept} 条）`, 'upload') }} disabled={!!inspectRes && chosenId === inspectRes.datasetId}>
+                <button className="btn primary" style={{ marginTop: 10 }} onClick={() => { if (inspectRes && processRes) chooseForTrain(inspectRes.datasetId, `${inspectRes.filename}（${processRes.kept} 条）`, 'upload') }} disabled={(!!inspectRes && chosenId === inspectRes.datasetId) || prepareStatus === 'running'}>
                   {inspectRes && chosenId === inspectRes.datasetId ? '已选择' : '选择'}
                 </button>
               </div>
