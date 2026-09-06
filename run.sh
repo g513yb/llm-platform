@@ -20,6 +20,12 @@ fi
 # —— 云端无 huggingface 访问，显式用本地 ModelScope 权重路径（可被环境变量覆盖）——
 export MODEL_NAME="${MODEL_NAME:-/root/autodl-tmp/llm-platform/models/Qwen2.5-7B-Instruct}"
 
+# —— 推理/训练量化（4090 24GB 跑 7B：推理 bf16 够快、训练 4bit 省显存）——
+#   QUANTIZATION：none=bf16（默认，最快）/8bit/4bit（需 bitsandbytes）
+#   TRAIN_QUANTIZATION：4bit（默认，QLoRA 省显存）/8bit/none（bf16 全精度，大显存更快）
+export QUANTIZATION="${QUANTIZATION:-none}"
+export TRAIN_QUANTIZATION="${TRAIN_QUANTIZATION:-4bit}"
+
 # —— 学术加速是 AutoDL 控制台的手动开关，脚本无法开启 ——
 #   请在 AutoDL 实例页 ->「学术加速」自行打开，可显著加快首次模型下载。
 #   或临时改用 HF 镜像端点加速下载，取消下面一行注释：

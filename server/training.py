@@ -8,7 +8,7 @@ from datetime import datetime
 
 
 
-from config import MODEL_NAME, MODEL_SHORT_NAME, DEFAULT_DEVICE_MAP
+from config import MODEL_NAME, MODEL_SHORT_NAME, DEFAULT_DEVICE_MAP, TRAIN_QUANTIZATION
 
 MODEL_PATH = MODEL_NAME
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -158,16 +158,26 @@ def run_training(task_id, dataset_path, rank, lr, epochs, batch, name, domain, d
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
 
-        bnb = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.float16,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_use_double_quant=True,
-        )
-        model = AutoModelForCausalLM.from_pretrained(
-            model_path, quantization_config=bnb, device_map=DEFAULT_DEVICE_MAP
-        )
-        model = prepare_model_for_kbit_training(model)
+        quant = TRAIN_QUANTIZATION.lower()
+        load_kwargs = {"device_map": DEFAULT_DEVICE_MAP}
+        # 4bit/8bit 计算精度：Ada(4070/4090, cap>=8) 原生支持 bf16，比 fp16 更稳（防溢出）
+        compute_dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8 else torch.float16
+        if quant == "4bit":
+            bnb = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=compute_dtype,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_use_double_quant=True,
+            )
+            load_kwargs["quantization_config"] = bnb
+        elif quant == "8bit":
+            load_kwargs["quantization_config"] = BitsAndBytesConfig(load_in_8bit=True)
+        else:
+            # none：直接 bf16/fp16 全精度
+            load_kwargs["torch_dtype"] = compute_dtype
+        model = AutoModelForCausalLM.from_pretrained(model_path, **load_kwargs)
+        if quant in ("4bit", "8bit"):
+            model = prepare_model_for_kbit_training(model)
         lora = LoraConfig(
             r=rank,
             lora_alpha=2 * rank,
