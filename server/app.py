@@ -258,8 +258,11 @@ def _scan_prepare_status():
         except Exception:
             continue
         for ds in data.get("datasets", []):
+            file_name = ds.get("file")
+            if not file_name:
+                continue
             item = {"domain": domain, "id": ds.get("id", ""), "name": ds.get("name", "")}
-            if (manifest.parent / ds["file"]).exists():
+            if (manifest.parent / file_name).exists():
                 ready.append(item)
             else:
                 missing.append(item)
@@ -277,11 +280,13 @@ async def prepare_reference_datasets():
         script = PROJECT_ROOT / "scripts" / "prepare_datasets.py"
         if not script.exists():
             return {"status": "error", "error": "prepare_datasets.py 不存在"}
+        log_path = PROJECT_ROOT / "logs" / "prepare.log"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
         _prepare_proc = subprocess.Popen(
             [sys.executable, str(script)],
             cwd=str(PROJECT_ROOT),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=open(log_path, "ab"),
+            stderr=subprocess.STDOUT,
         )
     return {"status": "running"}
 
