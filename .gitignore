@@ -44,3 +44,8 @@ logs/
 # 模型权重与 HuggingFace 缓存（大文件，各机器自行下载/挂载，不入库）
 hf/
 models/
+
+# 后端运行时状态：LoRA 权重目录、训练/评测任务记录（各机器自行生成，不入库）
+server/adapters/
+server/jobs.json
+server/eval_jobs.json
