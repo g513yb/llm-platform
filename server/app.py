@@ -225,11 +225,27 @@ async def get_output_file(filename: str):
     return {"filename": filename, "content": path.read_text(encoding="utf-8")}
 
 
+def _count_records(path: Path) -> int:
+    """实时统计数据文件记录数，避免 manifest 手写值过期。"""
+    suffix = path.suffix.lower()
+    if suffix == ".jsonl":
+        with open(path, "r", encoding="utf-8") as f:
+            return sum(1 for _ in f)
+    if suffix == ".json":
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return len(data) if isinstance(data, (list, dict)) else 0
+    if suffix == ".csv":
+        with open(path, "r", encoding="utf-8") as f:
+            return sum(1 for _ in f) - 1
+    return 0
+
+
 @app.get("/api/datasets/reference")
 async def reference_datasets(domain: str):
     """领域参考数据集列表（从 data/reference/{slug}/manifest.json 读取）。
     框架：每个领域一个 manifest.json，描述其参考数据集元信息；
-    后期扩展只需放数据 + 更新 manifest，前端自动展示。"""
+    后期扩展只需放数据 + 更新 manifest，前端自动展示。
+    rows 实时从源文件统计，避免手写值过期。"""
     from config import DOMAIN_SLUGS, DATA_DIR
     slug = DOMAIN_SLUGS.get(domain)
     if not slug:
@@ -239,7 +255,17 @@ async def reference_datasets(domain: str):
         return {"datasets": []}
     try:
         data = json.loads(manifest_path.read_text(encoding="utf-8"))
-        train_datasets = [ds for ds in data.get("datasets", []) if ds.get("purpose", "train") == "train"]
+        train_datasets = []
+        for ds in data.get("datasets", []):
+            if ds.get("purpose", "train") != "train":
+                continue
+            ds = dict(ds)
+            file_name = ds.get("file")
+            if file_name:
+                file_path = manifest_path.parent / file_name
+                if file_path.exists():
+                    ds["rows"] = _count_records(file_path)
+            train_datasets.append(ds)
         return {"datasets": train_datasets}
     except Exception as e:
         return {"error": str(e), "datasets": []}

@@ -24,6 +24,12 @@ type Phase = 'idle' | 'inspecting' | 'inspected' | 'processing' | 'done'
 
 const fmt = (n: number) => n.toLocaleString('zh-CN')
 
+const FORMAT_LABELS: Record<string, string> = {
+  alpaca: 'Alpaca',
+  'cmb-exam-choice': '选择题',
+}
+const formatLabel = (f?: string) => (f ? FORMAT_LABELS[f] || f : '—')
+
 export default function Datasets() {
   const { domain } = useOutletContext<{ domain: Domain }>()
   const [chosenId, setChosenId] = useState<string | null>(null)
@@ -254,14 +260,16 @@ export default function Datasets() {
         <div className="tbl-scroll">
           <table className="tbl">
             <thead>
-              <tr><th>数据集</th><th /></tr>
+              <tr><th>数据集</th><th>样本数</th><th>数据类型</th><th /></tr>
             </thead>
             <tbody>
               {refDatasets.length === 0 ? (
-                <tr><td colSpan={2} style={{ color: 'var(--muted)', textAlign: 'center', padding: '18px' }}>暂无参考数据集，可通过上方导入</td></tr>
+                <tr><td colSpan={4} style={{ color: 'var(--muted)', textAlign: 'center', padding: '18px' }}>暂无参考数据集，可通过上方导入</td></tr>
               ) : refDatasets.map((d) => (
                 <tr key={d.id} style={{ cursor: 'pointer', background: selected?.id === d.id ? 'color-mix(in srgb, var(--accent) 5%, white)' : undefined }} onClick={() => setSelected(d)}>
                   <td style={{ fontWeight: 600 }}>{d.name}</td>
+                  <td className="num">{d.rows != null ? fmt(d.rows) : '—'}</td>
+                  <td>{formatLabel(d.format)}</td>
                   <td>
                     <button className="btn ghost sm" onClick={() => chooseForTrain(`ref:${d.id}`, d.name, 'reference')} disabled={chosenId === `ref:${d.id}` || prepareStatus === 'running'}>
                       {chosenId === `ref:${d.id}` ? '已选择' : '选择'}
