@@ -201,7 +201,7 @@ async def process_dataset(req: ProcessRequest):
     dataset_path = os.path.join(training.DATASET_DIR, files[0])
     try:
         from data_pipeline import run_pipeline
-        s = run_pipeline(req.domain, [dataset_path])
+        s = run_pipeline(req.domain, [dataset_path], dataset_id=req.datasetId)
         return {
             "total": s.total,
             "kept": s.kept,
@@ -304,9 +304,9 @@ async def prepare_status():
 
 
 def _resolve_dataset_path(dataset_id: str, domain: str) -> str | None:
-    """解析训练数据集路径：ref: 前缀走 manifest，否则走上传目录前缀匹配。"""
+    """解析训练用 Alpaca 路径：ref: 前缀走 manifest，否则用 process 产出的 {datasetId}_alpaca.jsonl。"""
+    from config import DOMAIN_SLUGS, DATA_DIR
     if dataset_id.startswith("ref:"):
-        from config import DOMAIN_SLUGS, DATA_DIR
         slug = DOMAIN_SLUGS.get(domain)
         if not slug:
             return None
@@ -323,10 +323,8 @@ def _resolve_dataset_path(dataset_id: str, domain: str) -> str | None:
         except Exception:
             return None
         return None
-    files = [f for f in os.listdir(training.DATASET_DIR) if f.startswith(dataset_id + "_")]
-    if not files:
-        return None
-    return os.path.join(training.DATASET_DIR, files[0])
+    alpaca = DATA_DIR / f"{dataset_id}_alpaca.jsonl"
+    return str(alpaca) if alpaca.exists() else None
 
 
 @app.post("/api/train")

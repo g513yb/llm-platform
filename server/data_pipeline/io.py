@@ -17,12 +17,16 @@ def messages_to_alpaca(messages: list[dict]) -> dict:
     return {"instruction": user, "input": "", "output": asst}
 
 
-def write_outputs(items: list[list[dict]], slug: str) -> list[str]:
-    """把 messages 列表落盘 Alpaca jsonl，返回输出文件路径列表。"""
+def write_outputs(items: list[list[dict]], slug: str, name: str | None = None) -> list[str]:
+    """把 messages 列表落盘 Alpaca jsonl，返回输出文件路径列表。
+
+    name: 输出文件名 stem（不含 _alpaca.jsonl），默认用 slug。上传数据集传 dataset_id 避免同领域覆盖。
+    """
     if not items:
         return []
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    path = DATA_DIR / f"{slug}_alpaca.jsonl"
+    stem = name or slug
+    path = DATA_DIR / f"{stem}_alpaca.jsonl"
     with path.open("w", encoding="utf-8") as f:
         for m in items:
             f.write(json.dumps(messages_to_alpaca(m), ensure_ascii=False) + "\n")

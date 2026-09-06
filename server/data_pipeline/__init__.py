@@ -52,7 +52,7 @@ def inspect(domain: str, file_paths: list[str], limit: int = 100) -> tuple[Pipel
     return PipelineSummary(kept=len(items), dropped=dropped, type_counts=counts), ""
 
 
-def run_pipeline(domain: str, file_paths: list[str]) -> PipelineSummary:
+def run_pipeline(domain: str, file_paths: list[str], dataset_id: str | None = None) -> PipelineSummary:
     if domain not in SUPPORTED:
         raise ValueError(f"不支持的领域：{domain}。当前支持：{SUPPORTED}")
     if not file_paths:
@@ -65,7 +65,7 @@ def run_pipeline(domain: str, file_paths: list[str]) -> PipelineSummary:
             f"未能识别出支持的数据格式。支持类型：{_TYPES}"
             + f"；共 {dropped} 条均不匹配（schema 见 readers.py SCHEMAS）。"
         )
-    files = io_mod.write_outputs(items, slug)
+    files = io_mod.write_outputs(items, slug, name=dataset_id)
 
     return PipelineSummary(
         total=len(items) + dropped,
