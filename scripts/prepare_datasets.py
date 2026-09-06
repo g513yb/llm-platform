@@ -26,8 +26,12 @@ def main():
         domain = manifest.parent.name
         data = json.loads(manifest.read_text(encoding="utf-8"))
         for ds in data.get("datasets", []):
+            file_name = ds.get("file")
+            if not file_name:
+                print(f"[跳过] {domain}/{ds.get('name', '?')}（无 file 字段，非训练数据集）")
+                continue
             found += 1
-            result_file = manifest.parent / ds["file"]
+            result_file = manifest.parent / file_name
             if result_file.exists():
                 print(f"[跳过] {domain}/{ds['name']}（结果已存在）")
                 continue
