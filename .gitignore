@@ -13,6 +13,9 @@ __pycache__/
 data/**/*.jsonl
 data/_inbox/
 
+# 评测结果产物（result.json + answers.jsonl，各机器自行生成，不入库）
+data/eval/
+
 # 下载的原始数据集（download_datasets.py 落盘；云端重建 fixtures 用，不入库）
 tests/fixtures/_downloads/
 # 测试可视化报告（云端生成，不入库）
