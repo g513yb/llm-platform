@@ -7,6 +7,8 @@ import { RadarChart, ScoreRing } from '../components/charts'
 
 const API_BASE = import.meta.env.VITE_API_BASE || ''
 
+const WRONG_DISPLAY_LIMIT = 50
+
 interface Adapter {
   id: string
   name: string
@@ -268,7 +270,7 @@ export default function Evaluation() {
           )}
           {result.result.wrong_items.length > 0 && (
             <h4 style={{ marginTop: 18, cursor: 'pointer', userSelect: 'none' }} onClick={() => setWrongExpanded(!wrongExpanded)}>
-              <span style={{ marginRight: 8, display: 'inline-block' }}>{wrongExpanded ? '▼' : '▶'}</span>错题示例（{result.result.wrong_items.length} 条{result.result.wrong_truncated ? '，已截断' : ''}）
+              <span style={{ marginRight: 8, display: 'inline-block' }}>{wrongExpanded ? '▼' : '▶'}</span>错题示例（共 {result.result.wrong_items.length} 条{result.result.wrong_items.length > WRONG_DISPLAY_LIMIT ? `，展示前 ${WRONG_DISPLAY_LIMIT} 条` : ''}）
             </h4>
           )}
           {wrongExpanded && result.result.wrong_items.length > 0 && (
@@ -276,7 +278,7 @@ export default function Evaluation() {
               <table className="tbl">
                 <thead><tr><th>id</th><th>exam_type</th><th>exam_class</th><th>题型</th><th>标准答案</th><th>模型答案</th></tr></thead>
                 <tbody>
-                  {result.result.wrong_items.map((w) => (
+                  {result.result.wrong_items.slice(0, WRONG_DISPLAY_LIMIT).map((w) => (
                     <tr key={w.id}><td className="num">{w.id}</td><td>{w.exam_type}</td><td style={{ fontSize: 12.5, color: 'var(--muted)' }}>{w.exam_class}</td><td style={{ fontSize: 12 }}>{w.question_type}</td><td className="num">{w.gold}</td><td className="num" style={{ color: 'var(--err)' }}>{w.pred || '（空）'}</td></tr>
                   ))}
                 </tbody>
