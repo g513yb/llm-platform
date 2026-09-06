@@ -14,8 +14,11 @@ export MODELS_DIR="${MODELS_DIR:-/root/autodl-tmp/llm-platform/models}"
 export QUANTIZATION="${QUANTIZATION:-none}"
 export TRAIN_QUANTIZATION="${TRAIN_QUANTIZATION:-none}"
 
-# 训练真实批大小（4090 24GB + 7B bf16 + MAX_LEN=512 可放 batch=4；本地 4070 8GB 不设此变量，默认 1 走累积）
-export TRAIN_REAL_BATCH="${TRAIN_REAL_BATCH:-4}"
+# 训练真实批大小（4090 24GB + 7B bf16 + MAX_LEN=512：batch=4 OOM，降至 2；本地 4070 8GB 不设此变量，默认 1 走累积）
+export TRAIN_REAL_BATCH="${TRAIN_REAL_BATCH:-2}"
+
+# 减少 CUDA 显存碎片（训练大模型时官方推荐）
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 
 source /root/miniconda3/etc/profile.d/conda.sh 2>/dev/null && conda activate base
 
