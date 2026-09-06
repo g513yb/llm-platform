@@ -55,6 +55,8 @@ export default function Evaluation() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [result, setResult] = useState<EvalResult | null>(null)
   const [errMsg, setErrMsg] = useState('')
+  const [layerExpanded, setLayerExpanded] = useState(true)
+  const [wrongExpanded, setWrongExpanded] = useState(true)
   const [form, setForm] = useState({
     adapterId: '',
     useCot: true,
@@ -90,6 +92,8 @@ export default function Evaluation() {
       if (r.error) { setErrMsg(r.error); return }
       setResult(r)
       setSelectedId(id)
+      setLayerExpanded(true)
+      setWrongExpanded(true)
       setErrMsg('')
     } catch {
       setErrMsg('获取结果失败')
@@ -236,43 +240,48 @@ export default function Evaluation() {
 
       {result && (
         <div className="card" style={{ marginTop: 18 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0 }}>分层准确率 · {result.task_id}</h3>
-            <button className="btn ghost sm" onClick={() => { setResult(null); setSelectedId(null) }}>收起</button>
-          </div>
-          <p className="card-sub">按 exam_type → exam_class 二级聚合，父类为子类算术平均</p>
-          <div className="tbl-scroll">
-            <table className="tbl">
-              <thead><tr><th>exam_type</th><th>exam_class</th><th style={{ width: 120 }}>准确率</th></tr></thead>
-              <tbody>
-                {Object.entries(result.result.per_subcategory).flatMap(([et, classes]) =>
-                  Object.entries(classes).map(([ec, acc]) => (
-                    <tr key={`${et}-${ec}`}><td>{et}</td><td style={{ fontSize: 12.5, color: 'var(--muted)' }}>{ec}</td><td className="num" style={{ fontWeight: 700, color: 'var(--accent)' }}>{(acc * 100).toFixed(2)}%</td></tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div style={{ marginTop: 14, display: 'flex', gap: 18, fontSize: 12.5, color: 'var(--muted)', flexWrap: 'wrap' }}>
-            <span>父类平均：</span>
-            {Object.entries(result.result.per_category).map(([et, acc]) => (
-              <span key={et}>{et} <b style={{ color: 'var(--accent)' }}>{(acc * 100).toFixed(2)}%</b></span>
-            ))}
-          </div>
-          {result.result.wrong_items.length > 0 && (
+          <h3 style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => setLayerExpanded(!layerExpanded)}>
+            <span style={{ marginRight: 8, display: 'inline-block' }}>{layerExpanded ? '▼' : '▶'}</span>分层准确率 · {result.task_id}
+          </h3>
+          {layerExpanded && (
             <>
-              <h4 style={{ marginTop: 18 }}>错题示例（{result.result.wrong_items.length} 条{result.result.wrong_truncated ? '，已截断' : ''}）</h4>
+              <p className="card-sub">按 exam_type → exam_class 二级聚合，父类为子类算术平均</p>
               <div className="tbl-scroll">
                 <table className="tbl">
-                  <thead><tr><th>id</th><th>exam_type</th><th>exam_class</th><th>题型</th><th>标准答案</th><th>模型答案</th></tr></thead>
+                  <thead><tr><th>exam_type</th><th>exam_class</th><th style={{ width: 120 }}>准确率</th></tr></thead>
                   <tbody>
-                    {result.result.wrong_items.map((w) => (
-                      <tr key={w.id}><td className="num">{w.id}</td><td>{w.exam_type}</td><td style={{ fontSize: 12.5, color: 'var(--muted)' }}>{w.exam_class}</td><td style={{ fontSize: 12 }}>{w.question_type}</td><td className="num">{w.gold}</td><td className="num" style={{ color: 'var(--err)' }}>{w.pred || '（空）'}</td></tr>
-                    ))}
+                    {Object.entries(result.result.per_subcategory).flatMap(([et, classes]) =>
+                      Object.entries(classes).map(([ec, acc]) => (
+                        <tr key={`${et}-${ec}`}><td>{et}</td><td style={{ fontSize: 12.5, color: 'var(--muted)' }}>{ec}</td><td className="num" style={{ fontWeight: 700, color: 'var(--accent)' }}>{(acc * 100).toFixed(2)}%</td></tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
+              <div style={{ marginTop: 14, display: 'flex', gap: 18, fontSize: 12.5, color: 'var(--muted)', flexWrap: 'wrap' }}>
+                <span>父类平均：</span>
+                {Object.entries(result.result.per_category).map(([et, acc]) => (
+                  <span key={et}>{et} <b style={{ color: 'var(--accent)' }}>{(acc * 100).toFixed(2)}%</b></span>
+                ))}
+              </div>
             </>
+          )}
+          {result.result.wrong_items.length > 0 && (
+            <h4 style={{ marginTop: 18, cursor: 'pointer', userSelect: 'none' }} onClick={() => setWrongExpanded(!wrongExpanded)}>
+              <span style={{ marginRight: 8, display: 'inline-block' }}>{wrongExpanded ? '▼' : '▶'}</span>错题示例（{result.result.wrong_items.length} 条{result.result.wrong_truncated ? '，已截断' : ''}）
+            </h4>
+          )}
+          {wrongExpanded && result.result.wrong_items.length > 0 && (
+            <div className="tbl-scroll">
+              <table className="tbl">
+                <thead><tr><th>id</th><th>exam_type</th><th>exam_class</th><th>题型</th><th>标准答案</th><th>模型答案</th></tr></thead>
+                <tbody>
+                  {result.result.wrong_items.map((w) => (
+                    <tr key={w.id}><td className="num">{w.id}</td><td>{w.exam_type}</td><td style={{ fontSize: 12.5, color: 'var(--muted)' }}>{w.exam_class}</td><td style={{ fontSize: 12 }}>{w.question_type}</td><td className="num">{w.gold}</td><td className="num" style={{ color: 'var(--err)' }}>{w.pred || '（空）'}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
