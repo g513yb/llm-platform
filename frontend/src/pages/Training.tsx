@@ -145,11 +145,7 @@ export default function Training() {
             <input id="t-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           </div>
           <div className="field">
-            <label>基础模型 <span className="hint">由后端配置，不支持选择</span></label>
-            <input value={health.model} readOnly />
-          </div>
-          <div className="field">
-            <label htmlFor="t-path">模型路径 <span className="hint">从已下载模型中选择</span></label>
+            <label htmlFor="t-path">基础模型 <span className="hint">从已下载模型中选择</span></label>
             {modelList.length > 0 ? (
               <select id="t-path" value={form.modelPath} onChange={(e) => setForm({ ...form, modelPath: e.target.value })}>
                 {modelList.map((m) => (
