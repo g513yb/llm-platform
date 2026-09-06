@@ -105,12 +105,16 @@ export default function Evaluation() {
     }
     const adapterId = form.adapterId || null
     try {
-      await fetch(`${API_BASE}/api/adapters/load`, {
+      const lr = await fetch(`${API_BASE}/api/adapters/load`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adapterId }),
-      })
-    } catch { /* ignore */ }
+      }).then((x) => x.json())
+      if (lr && lr.error) { setErrMsg(`切换权重失败：${lr.error}`); return }
+    } catch {
+      setErrMsg('切换权重失败：无法连接后端')
+      return
+    }
     try {
       const r = await fetch(`${API_BASE}/api/eval`, {
         method: 'POST',

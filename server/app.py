@@ -533,6 +533,14 @@ async def start_eval(req: EvalRequest):
         return {"error": f"模型加载失败：{err}"}
     if infer_model is None:
         return {"error": "模型尚未就绪，请先在对话页加载或切换权重"}
+    req_aid = req.adapterId
+    cur_aid = active_adapter.get("id")
+    if req_aid != cur_aid:
+        if req_aid:
+            target = next((a["name"] for a in training.list_adapters() if a["id"] == req_aid), req_aid)
+        else:
+            target = "基座模型"
+        return {"error": f"权重未就绪：当前激活为「{active_adapter.get('name', '基座模型')}」，请先切换到「{target}」"}
     task_id = f"ev-{uuid.uuid4().hex[:8]}"
     test_path = req.testPath or str(DEFAULT_TEST_PATH)
     answer_path = req.answerPath or str(DEFAULT_ANSWER_PATH)
