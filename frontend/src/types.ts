@@ -21,12 +21,12 @@ export interface ProcessStep {
 export interface Dataset {
   id: string
   name: string
-  version: string
-  rows: number
-  updated: string
-  quality: number
-  splits: { train: number; val: number; test: number }
-  steps: ProcessStep[]
+  version?: string
+  rows?: number
+  updated?: string
+  quality?: number
+  splits?: { train: number; val: number; test: number }
+  steps?: ProcessStep[]
 }
 
 export interface TrainTask {

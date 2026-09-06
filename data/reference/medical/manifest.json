@@ -4,11 +4,6 @@
     {
       "id": "cmb-train-alpaca",
       "name": "CMB 医师考试训练集（Alpaca）",
-      "version": "v1.0.0",
-      "rows": 268855,
-      "updated": "2026-09-05",
-      "quality": 100,
-      "splits": { "train": 98, "val": 1, "test": 1 },
       "format": "alpaca",
       "file": "cmb_train_alpaca.jsonl",
       "source": {
@@ -17,22 +12,11 @@
         "convertScript": "scripts/datasets/medical/cmb_train_2_alpaca.py",
         "checkScript": "scripts/datasets/medical/check_cmb_train_alpaca.py",
         "note": "CMB-Exam train 合并集按 exam_type/exam_class 拆分小文件入库 → 过滤 C型/空答案/长答案/非字母答案/选项空 → Alpaca"
-      },
-      "steps": [
-        { "label": "格式检查", "fr": "FR-04", "in": 269359, "out": 269359 },
-        { "label": "无效过滤", "fr": "FR-05", "in": 269359, "out": 268855 },
-        { "label": "去重", "fr": "FR-05", "in": 268855, "out": 268855 },
-        { "label": "标注格式化", "fr": "FR-06", "in": 268855, "out": 268855 }
-      ]
+      }
     },
     {
       "id": "cmb-test-eval",
       "name": "CMB 医师考试测试集（评测用）",
-      "version": "v1.0.0",
-      "rows": 11200,
-      "updated": "2026-09-05",
-      "quality": 100,
-      "splits": { "train": 0, "val": 0, "test": 100 },
       "format": "cmb-exam-choice",
       "purpose": "eval",
       "files": {
@@ -47,11 +31,6 @@
     {
       "id": "cmb-val-fewshot",
       "name": "CMB 医师考试验证集（Few-shot 示例库）",
-      "version": "v1.0.0",
-      "rows": 280,
-      "updated": "2026-09-05",
-      "quality": 100,
-      "splits": { "train": 0, "val": 100, "test": 0 },
       "format": "cmb-exam-choice",
       "purpose": "fewshot",
       "file": "eval/cmb_val_merge.json",
