@@ -38,7 +38,7 @@
 - **后端端点**：`POST /api/datasets/upload`（inspect 轻量识别不落盘）、`POST /api/datasets/process`（run_pipeline 落盘）、`GET /api/datasets/output/{filename}`（查看输出文件）
 
 ### Sprint 3 · LoRA 微调 + 权重保存
-- **量化可切**：按 `config.TRAIN_QUANTIZATION`（4bit/8bit/none）选训练量化，4bit/8bit 走 `prepare_model_for_kbit_training` + LoRA，none 走 bf16/fp16 全精度。本地 4070 8GB + Qwen2.5-3B-Instruct 4bit QLoRA；云端 4090 24GB + Qwen2.5-7B-Instruct。
+- **量化可切**：按 `config.TRAIN_QUANTIZATION`（4bit/8bit/none）选训练量化，4bit/8bit 走 `prepare_model_for_kbit_training` + LoRA，none 走 bf16/fp16 全精度。本地 4070 8GB + Qwen2.5-3B-Instruct 4bit QLoRA；云端 4090 24GB + Qwen2.5-7B-Instruct bf16 全精度 LoRA。
 - **任务管理**：`JOBS` dict + `jobs.json` 持久化，线程异步训练，服务重启时运行中任务标记"已终止"。
 - **权重落盘**：训练完成落盘 `server/adapters/<task_id>/`，`index.json` 登记。
 - **前端**：`Training.tsx` 接 `/api/train` 真接口（创建/列表/状态/停止/删除 + LossCurve）。

@@ -10,9 +10,9 @@ mkdir -p "$HF_HOME"
 export MODEL_NAME="${MODEL_NAME:-/root/autodl-tmp/llm-platform/models/Qwen2.5-7B-Instruct}"
 export MODELS_DIR="${MODELS_DIR:-/root/autodl-tmp/llm-platform/models}"
 
-# 推理/训练量化（4090 24GB 跑 7B：推理 bf16、训练 4bit QLoRA；可被环境变量覆盖）
+# 推理/训练量化（4090 24GB 跑 7B：bf16 全精度 LoRA，显存够且最快无损；可被环境变量覆盖）
 export QUANTIZATION="${QUANTIZATION:-none}"
-export TRAIN_QUANTIZATION="${TRAIN_QUANTIZATION:-4bit}"
+export TRAIN_QUANTIZATION="${TRAIN_QUANTIZATION:-none}"
 
 source /root/miniconda3/etc/profile.d/conda.sh 2>/dev/null && conda activate base
 

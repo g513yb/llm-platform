@@ -10,7 +10,7 @@ FastAPI + React(Vite/TS) + PyTorch + HuggingFace Transformers + PEFT(LoRA) 的�
 - **领域仅标注**：领域（医疗/法律/金融/教育）不影响数据处理逻辑，实际处理只关注 schema；领域仅用于输出文件命名（`{slug}_alpaca.jsonl`）。
 - **内部统一格式 = messages**：`[{role, content}, ...]`（引擎契约，与对话 Tab 一致）。`readers` 按 schema 自动识别多种输入（Alpaca/ShareGPT/CSV/CMB/MedQA/Toyhom/fingpt/MMLU/CMMLU 等），`_parse_clin`/`_parse_mcq`/`_parse_qa` 转成 messages。
 - **训练输出 = Alpaca**：`io.messages_to_alpaca()` 落盘 `data/<slug>_alpaca.jsonl`（`{instruction,input,output}`）。运行时对话仍用 messages/Qwen chat 模板。
-- **LoRA 训练**：`training.py` 的 `SFTDataset` 用 Qwen chat template 构建 prompt/full，prompt 部分 label=-100，仅对 assistant 段算 loss；按 `config.TRAIN_QUANTIZATION`（4bit/8bit/none）选量化，4bit/8bit 走 `prepare_model_for_kbit_training` + LoRA，none 走 bf16/fp16 全精度。本地 4070 8GB + Qwen2.5-3B-Instruct 4bit QLoRA；云端 4090 24GB + Qwen2.5-7B-Instruct。任务管理 `JOBS` dict + `jobs.json` 持久化，线程异步训练，服务重启时运行中任务标记"已终止"。
+- **LoRA 训练**：`training.py` 的 `SFTDataset` 用 Qwen chat template 构建 prompt/full，prompt 部分 label=-100，仅对 assistant 段算 loss；按 `config.TRAIN_QUANTIZATION`（4bit/8bit/none）选量化，4bit/8bit 走 `prepare_model_for_kbit_training` + LoRA，none 走 bf16/fp16 全精度。本地 4070 8GB + Qwen2.5-3B-Instruct 4bit QLoRA；云端 4090 24GB + Qwen2.5-7B-Instruct bf16 全精度 LoRA。任务管理 `JOBS` dict + `jobs.json` 持久化，线程异步训练，服务重启时运行中任务标记"已终止"。
 - **权重管理**：训练完成落盘 `server/adapters/<id>/`，`index.json` 登记；`/api/adapters` 列表、`/api/adapters/load` 热切换、`/api/adapters/active` 查当前。对话/评测共用 `infer_model`，切权重时加 `adapter_lock` 串行。
 - **CMB-Exam 评测**：`eval_runner.py` 完整重现 CMB 12 项处理细节（option_str 过滤、两步 format、左 padding 切 prompt、多采样投票、match_choice 正则回退、父类准确率=子类算术平均等）；`evaluation.py` 仿训练任务管理，复用 `infer_model`，支持 few-shot（从 `cmb_val_merge.json` 选示例）。默认评测数据 `data/reference/medical/eval/`（11200 题）。
 

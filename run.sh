@@ -21,11 +21,11 @@ fi
 export MODEL_NAME="${MODEL_NAME:-/root/autodl-tmp/llm-platform/models/Qwen2.5-7B-Instruct}"
 export MODELS_DIR="${MODELS_DIR:-/root/autodl-tmp/llm-platform/models}"
 
-# —— 推理/训练量化（4090 24GB 跑 7B：推理 bf16 够快、训练 4bit 省显存）——
+# —— 推理/训练量化（4090 24GB 跑 7B：bf16 全精度，显存够且最快无损）——
 #   QUANTIZATION：none=bf16（默认，最快）/8bit/4bit（需 bitsandbytes）
-#   TRAIN_QUANTIZATION：4bit（默认，QLoRA 省显存）/8bit/none（bf16 全精度，大显存更快）
+#   TRAIN_QUANTIZATION：none=bf16 全精度 LoRA（4090 24GB 够）/8bit/4bit（QLoRA 省显存，小卡用）
 export QUANTIZATION="${QUANTIZATION:-none}"
-export TRAIN_QUANTIZATION="${TRAIN_QUANTIZATION:-4bit}"
+export TRAIN_QUANTIZATION="${TRAIN_QUANTIZATION:-none}"
 
 # —— 学术加速是 AutoDL 控制台的手动开关，脚本无法开启 ——
 #   请在 AutoDL 实例页 ->「学术加速」自行打开，可显著加快首次模型下载。
