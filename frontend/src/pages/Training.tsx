@@ -28,6 +28,7 @@ export default function Training() {
   const [created, setCreated] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [health, setHealth] = useState<{ model: string; quant: string }>({ model: BASE_MODEL, quant: QUANT_BITS })
+  const [modelList, setModelList] = useState<{ name: string; path: string }[]>([])
   const [trainDataset] = useState<{ datasetId: string; label: string; source: string } | null>(() => {
     try {
       const raw = sessionStorage.getItem(`train-dataset:${domain.id}`)
@@ -56,6 +57,12 @@ export default function Training() {
   useEffect(() => {
     fetch(`${API_BASE}/api/health`).then((x) => x.json()).then((h) => {
       if (h.model) setHealth({ model: h.model, quant: h.quant || QUANT_BITS })
+    }).catch(() => {})
+    fetch(`${API_BASE}/api/models`).then((x) => x.json()).then((m) => {
+      if (Array.isArray(m.models)) {
+        setModelList(m.models)
+        if (m.current) setForm((f) => ({ ...f, modelPath: m.current }))
+      }
     }).catch(() => {})
     refreshJobs()
     const t = setInterval(refreshJobs, 2000)
@@ -142,8 +149,16 @@ export default function Training() {
             <input value={health.model} readOnly />
           </div>
           <div className="field">
-            <label htmlFor="t-path">模型路径 <span className="hint">本地权重位置，可自行指定</span></label>
-            <input id="t-path" value={form.modelPath} placeholder="留空使用云端默认模型" onChange={(e) => setForm({ ...form, modelPath: e.target.value })} />
+            <label htmlFor="t-path">模型路径 <span className="hint">从已下载模型中选择</span></label>
+            {modelList.length > 0 ? (
+              <select id="t-path" value={form.modelPath} onChange={(e) => setForm({ ...form, modelPath: e.target.value })}>
+                {modelList.map((m) => (
+                  <option key={m.path} value={m.path}>{m.name}</option>
+                ))}
+              </select>
+            ) : (
+              <input id="t-path" value={form.modelPath} placeholder="加载中…" readOnly />
+            )}
           </div>
           <div className="field">
             <label>数据集 <span className="hint">由数据集管理页选定</span></label>

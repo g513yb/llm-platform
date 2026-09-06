@@ -18,7 +18,7 @@ import training
 import evaluation
 from eval_runner import DEFAULT_TEST_PATH, DEFAULT_ANSWER_PATH, DEFAULT_GEN_CONFIG
 
-from config import MODEL_NAME, QUANTIZATION, DEFAULT_DEVICE_MAP, MODEL_SHORT_NAME
+from config import MODEL_NAME, QUANTIZATION, DEFAULT_DEVICE_MAP, MODEL_SHORT_NAME, MODELS_DIR
 
 MODEL_PATH = MODEL_NAME
 PORT = int(os.environ.get("PORT", "8000"))
@@ -148,6 +148,27 @@ app.add_middleware(
 @app.get("/api/health")
 def health():
     return {"status": "ok", "model": MODEL_SHORT_NAME, "quant": QUANTIZATION, "ready": infer_model is not None}
+
+
+@app.get("/api/models")
+def list_models():
+    """列出本地可用模型供训练页下拉选择。
+    扫描 MODELS_DIR 子目录 + 当前 MODEL_NAME，返回 {current, models:[{name,path}]}。
+    """
+    models = []
+    seen = set()
+    if MODELS_DIR and os.path.isdir(MODELS_DIR):
+        for name in sorted(os.listdir(MODELS_DIR)):
+            full = os.path.join(MODELS_DIR, name)
+            if os.path.isdir(full) and name not in seen:
+                seen.add(name)
+                models.append({"name": name, "path": full})
+    # 确保当前 MODEL_NAME 在列表中
+    cur_name = MODEL_SHORT_NAME
+    cur_path = MODEL_NAME
+    if cur_name not in seen:
+        models.insert(0, {"name": cur_name, "path": cur_path})
+    return {"current": cur_path, "currentName": cur_name, "models": models}
 
 
 class TrainRequest(BaseModel):

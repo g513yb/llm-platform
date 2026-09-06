@@ -14,6 +14,10 @@ DATA_DIR = PROJECT_ROOT / "data"          # 数据处理产物：alpaca jsonl
 MODEL_NAME = os.environ.get("MODEL_NAME", "Qwen/Qwen2.5-7B-Instruct")
 MODEL_SHORT_NAME = MODEL_NAME.split("/")[-1]
 
+# 模型目录（本地权重存放处，/api/models 扫描此目录列出可选模型）
+# 留空则 /api/models 只返回当前 MODEL_NAME；run_local.bat/run.sh 通过 env 设定
+MODELS_DIR = os.environ.get("MODELS_DIR", "")
+
 # —— 设备 / 精度 ——
 # FORCE_DEVICE：None=自动探测（优先认 FORCE_DEVICE）；"cuda" 强制；"cpu" 仅本地调试（7B 会极慢/报错）。
 # 可用环境变量覆盖，便于本机调试不污染云端默认。

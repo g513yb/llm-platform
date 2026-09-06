@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 云端后台启动脚本：由 deploy.sh start 通过 setsid 调用，真正后台运行（不受 ssh 断开影响）
+# 云端后台启动脚本：由 ssh 远程通过 setsid 调用，真正后台运行（不受 ssh 断开影响）
 set -euo pipefail
 cd "$(dirname "$0")"                       # 项目根 = /root/autodl-tmp/llm-platform
 
@@ -8,6 +8,7 @@ mkdir -p "$HF_HOME"
 
 # 云端无 huggingface 访问，显式用本地 ModelScope 权重路径（可被环境变量覆盖）
 export MODEL_NAME="${MODEL_NAME:-/root/autodl-tmp/llm-platform/models/Qwen2.5-7B-Instruct}"
+export MODELS_DIR="${MODELS_DIR:-/root/autodl-tmp/llm-platform/models}"
 
 # 推理/训练量化（4090 24GB 跑 7B：推理 bf16、训练 4bit QLoRA；可被环境变量覆盖）
 export QUANTIZATION="${QUANTIZATION:-none}"

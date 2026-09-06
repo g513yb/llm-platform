@@ -19,6 +19,7 @@ fi
 
 # —— 云端无 huggingface 访问，显式用本地 ModelScope 权重路径（可被环境变量覆盖）——
 export MODEL_NAME="${MODEL_NAME:-/root/autodl-tmp/llm-platform/models/Qwen2.5-7B-Instruct}"
+export MODELS_DIR="${MODELS_DIR:-/root/autodl-tmp/llm-platform/models}"
 
 # —— 推理/训练量化（4090 24GB 跑 7B：推理 bf16 够快、训练 4bit 省显存）——
 #   QUANTIZATION：none=bf16（默认，最快）/8bit/4bit（需 bitsandbytes）

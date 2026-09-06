@@ -8,6 +8,7 @@ set QUANTIZATION=4bit
 
 rem 本地模型目录（改这里，或启动前  set MODEL_NAME=你的路径  覆盖它）
 rem 4070 8GB 默认 3B（4bit QLoRA 稳）；4090 24GB 可改 7B
+set MODELS_DIR=D:\models
 if "%MODEL_NAME%"=="" set MODEL_NAME=D:\models\Qwen2.5-3B-Instruct
 
 if not exist "%MODEL_NAME%" (
