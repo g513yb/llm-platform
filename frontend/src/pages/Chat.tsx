@@ -114,7 +114,7 @@ export default function Chat() {
     const s: ChatSession = {
       id: `${domain.id}-s-${Date.now()}`,
       title: `新对话 ${sessions.length + 1}`,
-      model: `${domain.en}-Qwen2.5-3B-v2.1`,
+      model: `${domain.en}-Qwen2.5-7B-v2.1`,
       messages: [],
     }
     setSessions((ss) => [s, ...ss])

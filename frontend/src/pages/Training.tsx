@@ -109,7 +109,7 @@ export default function Training() {
     <div>
       <h1 className="page-title display">模型训练</h1>
       <p className="page-sub">
-        基于固定基座模型 {BASE_MODEL}（LoRA · 4bit 量化，适配 8GB 显存），选择数据集版本并调整超参数创建训练任务。任务在后台执行（FR-09 ~ FR-12），完成后领域权重自动入库。
+        基于固定基座模型 {BASE_MODEL}（LoRA · 4bit 量化，适配云端 24GB 显存 RTX 4090），选择数据集版本并调整超参数创建训练任务。任务在后台执行（FR-09 ~ FR-12），完成后领域权重自动入库。
       </p>
 
       <div className="grid cols-2">

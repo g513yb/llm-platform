@@ -18,8 +18,10 @@ MODEL_SHORT_NAME = MODEL_NAME.split("/")[-1]
 # FORCE_DEVICE：None=自动探测（优先认 FORCE_DEVICE）；"cuda" 强制；"cpu" 仅本地调试（7B 会极慢/报错）。
 # 可用环境变量覆盖，便于本机调试不污染云端默认。
 FORCE_DEVICE = os.environ.get("FORCE_DEVICE")   # None 或 "cuda"/"cpu"
-# QUANTIZATION：可被环境变量覆盖；云端默认 "none"；本地 12GB 显存跑 7B 用 "4bit"。
+# 推理量化（对话/评测）：none=bf16/fp16（4090 24GB 跑 7B 够且最快）|8bit|4bit
 QUANTIZATION = os.environ.get("QUANTIZATION", "none")   # "none" | "8bit" | "4bit"（8bit/4bit 需 bitsandbytes + GPU）
+# 训练量化：4bit（prepare_model_for_kbit_training 需 kbit 量化，省显存放 LoRA+优化器+激活）
+TRAIN_QUANTIZATION = os.environ.get("TRAIN_QUANTIZATION", "4bit")   # "4bit" | "8bit"
 
 # —— 生成默认参数（对话 Tab 使用）——
 GENERATION = dict(

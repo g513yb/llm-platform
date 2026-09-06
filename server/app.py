@@ -18,7 +18,7 @@ import training
 import evaluation
 from eval_runner import DEFAULT_TEST_PATH, DEFAULT_ANSWER_PATH, DEFAULT_GEN_CONFIG
 
-from config import MODEL_NAME
+from config import MODEL_NAME, QUANTIZATION, DEFAULT_DEVICE_MAP, MODEL_SHORT_NAME
 
 MODEL_PATH = MODEL_NAME
 PORT = int(os.environ.get("PORT", "8000"))
@@ -43,30 +43,42 @@ _prepare_proc = None
 _prepare_lock = Lock()
 
 
+def _load_model(path):
+    """按 config.QUANTIZATION 加载模型与 tokenizer，返回 (model, tokenizer)。"""
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+    kwargs = {"device_map": DEFAULT_DEVICE_MAP}
+    if QUANTIZATION == "4bit":
+        from transformers import BitsAndBytesConfig
+        kwargs["quantization_config"] = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+        )
+    elif QUANTIZATION == "8bit":
+        from transformers import BitsAndBytesConfig
+        kwargs["quantization_config"] = BitsAndBytesConfig(load_in_8bit=True)
+    else:
+        # none：4090(cap>=8) 用 bf16，老卡 fp16
+        dtype = torch.bfloat16 if torch.cuda.is_available() and torch.cuda.get_device_capability()[0] >= 8 else torch.float16
+        kwargs["torch_dtype"] = dtype
+    tok = AutoTokenizer.from_pretrained(path)
+    if tok.pad_token is None:
+        tok.pad_token = tok.eos_token
+    m = AutoModelForCausalLM.from_pretrained(path, **kwargs)
+    m.eval()
+    return m, tok
+
+
 def ensure_model_loaded():
     global base_model, infer_model, tokenizer
     with model_lock:
         if base_model is not None:
             return True, ""
         try:
-            import torch
-            from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-            print(f"首次加载模型（4bit 量化）：{current_model_path}", flush=True)
-            bnb_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_compute_dtype=torch.float16,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_use_double_quant=True,
-            )
-            tok = AutoTokenizer.from_pretrained(current_model_path)
-            if tok.pad_token is None:
-                tok.pad_token = tok.eos_token
-            m = AutoModelForCausalLM.from_pretrained(
-                current_model_path,
-                quantization_config=bnb_config,
-                device_map={"": 0},
-            )
-            m.eval()
+            print(f"首次加载模型（{QUANTIZATION}）：{current_model_path}", flush=True)
+            m, tok = _load_model(current_model_path)
             tokenizer = tok
             base_model = m
             infer_model = m
@@ -100,23 +112,10 @@ def reload_infer_model():
     gc.collect()
     try:
         import torch
-        from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
         torch.cuda.empty_cache()
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.float16,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_use_double_quant=True,
-        )
-
-        base_model = AutoModelForCausalLM.from_pretrained(
-            current_model_path, quantization_config=bnb_config, device_map={"": 0}
-        )
-        base_model.eval()
+        base_model, tok = _load_model(current_model_path)
         if tokenizer is None:
-            tokenizer = AutoTokenizer.from_pretrained(current_model_path)
-            if tokenizer.pad_token is None:
-                tokenizer.pad_token = tokenizer.eos_token
+            tokenizer = tok
         infer_model = base_model
         active_adapter = {"id": None, "name": "基座模型"}
     except Exception as e:
@@ -148,7 +147,7 @@ app.add_middleware(
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "model": "Qwen2.5-3B-Instruct", "quant": "4bit", "ready": infer_model is not None}
+    return {"status": "ok", "model": MODEL_SHORT_NAME, "quant": QUANTIZATION, "ready": infer_model is not None}
 
 
 class TrainRequest(BaseModel):

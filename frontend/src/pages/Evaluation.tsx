@@ -58,7 +58,7 @@ export default function Evaluation() {
   const [form, setForm] = useState({
     adapterId: '',
     useCot: true,
-    batchSize: '1',
+    batchSize: '4',
     nShot: '0',
     name: '',
   })

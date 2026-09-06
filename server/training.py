@@ -8,7 +8,7 @@ from datetime import datetime
 
 
 from data_pipeline.readers import read_all
-from config import MODEL_NAME
+from config import MODEL_NAME, MODEL_SHORT_NAME, DEFAULT_DEVICE_MAP
 
 MODEL_PATH = MODEL_NAME
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -20,7 +20,7 @@ os.makedirs(DATASET_DIR, exist_ok=True)
 JOBS: dict[str, dict] = {}
 JOBS_LOCK = threading.Lock()
 
-MAX_LEN = 256
+MAX_LEN = 512
 INDEX_PATH = os.path.join(ADAPTER_DIR, "index.json")
 JOBS_PATH = os.path.join(BASE_DIR, "jobs.json")
 
@@ -163,7 +163,7 @@ def run_training(task_id, dataset_path, rank, lr, epochs, batch, name, domain, d
             bnb_4bit_use_double_quant=True,
         )
         model = AutoModelForCausalLM.from_pretrained(
-            model_path, quantization_config=bnb, device_map={"": 0}
+            model_path, quantization_config=bnb, device_map=DEFAULT_DEVICE_MAP
         )
         model = prepare_model_for_kbit_training(model)
         lora = LoraConfig(
@@ -270,7 +270,7 @@ def start_job(task_id, dataset_path, rank, lr, epochs, batch, name, domain, data
             "name": name,
             "dataset": dataset_label,
             "domain": domain,
-            "baseModel": "Qwen2.5-3B-Instruct",
+            "baseModel": MODEL_SHORT_NAME,
             "started": datetime.now().strftime("%m-%d %H:%M"),
             "stop": False,
         }

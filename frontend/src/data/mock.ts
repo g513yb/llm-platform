@@ -93,7 +93,7 @@ function bundle(domain: Domain): DomainBundle {
       {
         id: `${d}-tk-1`,
         name: `${domain.en}-LoRA-r16-e3`,
-        baseModel: 'Qwen2.5-3B-Instruct',
+        baseModel: 'Qwen2.5-7B-Instruct',
         dataset: `${domain.name}领域指令语料库 v2.1.0`,
         status: '完成',
         progress: 100,
@@ -105,7 +105,7 @@ function bundle(domain: Domain): DomainBundle {
       {
         id: `${d}-tk-2`,
         name: `${domain.en}-LoRA-r32-e2`,
-        baseModel: 'Qwen2.5-3B-Instruct',
+        baseModel: 'Qwen2.5-7B-Instruct',
         dataset: `${domain.name}多轮对话数据集 v1.4.0`,
         status: '运行中',
         progress: 64,
@@ -117,7 +117,7 @@ function bundle(domain: Domain): DomainBundle {
       {
         id: `${d}-tk-3`,
         name: `${domain.en}-LoRA-r64-e1`,
-        baseModel: 'Qwen2.5-3B-Instruct',
+        baseModel: 'Qwen2.5-7B-Instruct',
         dataset: `${domain.name}领域指令语料库 v2.0.0`,
         status: '失败',
         progress: 43,
@@ -129,7 +129,7 @@ function bundle(domain: Domain): DomainBundle {
       {
         id: `${d}-tk-4`,
         name: `${domain.en}-LoRA-r8-e3`,
-        baseModel: 'Qwen2.5-3B-Instruct',
+        baseModel: 'Qwen2.5-7B-Instruct',
         dataset: `${domain.name}领域指令语料库 v1.9.0`,
         status: '等待',
         progress: 0,
@@ -142,24 +142,24 @@ function bundle(domain: Domain): DomainBundle {
     models: [
       {
         id: `${d}-m-1`,
-        name: `${domain.en}-Qwen2.5-3B-v2.1`,
-        baseModel: 'Qwen2.5-3B-Instruct',
+        name: `${domain.en}-Qwen2.5-7B-v2.1`,
+        baseModel: 'Qwen2.5-7B-Instruct',
         trainedOn: '语料库 v2.1.0',
         sizeGB: 2.1,
         status: '可用',
       },
       {
         id: `${d}-m-2`,
-        name: `${domain.en}-Qwen2.5-3B-v1.4`,
-        baseModel: 'Qwen2.5-3B-Instruct',
+        name: `${domain.en}-Qwen2.5-7B-v1.4`,
+        baseModel: 'Qwen2.5-7B-Instruct',
         trainedOn: '对话集 v1.4.0',
         sizeGB: 1.9,
         status: '可用',
       },
       {
         id: `${d}-m-3`,
-        name: `${domain.en}-Qwen2.5-3B-v0.9`,
-        baseModel: 'Qwen2.5-3B-Instruct',
+        name: `${domain.en}-Qwen2.5-7B-v0.9`,
+        baseModel: 'Qwen2.5-7B-Instruct',
         trainedOn: '语料库 v2.0.0',
         sizeGB: 1.7,
         status: '归档',
@@ -168,7 +168,7 @@ function bundle(domain: Domain): DomainBundle {
     evals: [
       {
         id: `${d}-ev-1`,
-        model: `${domain.en}-Qwen2.5-3B-v2.1`,
+        model: `${domain.en}-Qwen2.5-7B-v2.1`,
         testSet: '基准测试集 v1.0.2',
         status: '完成',
         composite: Math.round(dims.reduce((a, b) => a + b, 0) / dims.length),
@@ -177,7 +177,7 @@ function bundle(domain: Domain): DomainBundle {
       },
       {
         id: `${d}-ev-2`,
-        model: `${domain.en}-Qwen2.5-3B-v1.4`,
+        model: `${domain.en}-Qwen2.5-7B-v1.4`,
         testSet: '基准测试集 v1.0.2',
         status: '完成',
         composite: Math.round(dims.reduce((a, b) => a + b, 0) / dims.length) - 3,
@@ -186,7 +186,7 @@ function bundle(domain: Domain): DomainBundle {
       },
       {
         id: `${d}-ev-3`,
-        model: `${domain.en}-Qwen2.5-3B-v0.9`,
+        model: `${domain.en}-Qwen2.5-7B-v0.9`,
         testSet: '基准测试集 v0.9.7',
         status: '完成',
         composite: Math.round(dims.reduce((a, b) => a + b, 0) / dims.length) - 6,
@@ -198,7 +198,7 @@ function bundle(domain: Domain): DomainBundle {
       {
         id: `${d}-s-1`,
         title: `${domain.tagline.split(' · ')[0]}能力验证`,
-        model: `${domain.en}-Qwen2.5-3B-v2.1`,
+        model: `${domain.en}-Qwen2.5-7B-v2.1`,
         messages: [],
       },
     ],
@@ -219,8 +219,8 @@ const bundles: Record<DomainId, DomainBundle> = {
 
 export const getBundle = (id: DomainId): DomainBundle => bundles[id]
 
-export const BASE_MODEL = 'Qwen2.5-3B-Instruct'
-export const MODEL_PATH = 'C:\\Qwen2.5-3B-Instruct'
+export const BASE_MODEL = 'Qwen2.5-7B-Instruct'
+export const MODEL_PATH = ''
 export const FINETUNE_METHOD = 'LoRA'
 export const QUANT_BITS = '4bit'
 
