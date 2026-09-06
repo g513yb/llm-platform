@@ -35,7 +35,7 @@ QUESTION_TEMPLATE_COT = "以下是中国{exam_type}中{exam_class}考试的一�
 QUESTION_TEMPLATE_DIRECT = "以下是中国{exam_type}中{exam_class}考试的一道{question_type}，不需要做任何分析和解释，直接输出答案选项。\n{question}\n{option_str}"
 
 # —— 生成默认参数（搬自 CMB configs/model_config.yaml）——
-DEFAULT_GEN_CONFIG = dict(max_new_tokens=512, min_new_tokens=1, do_sample=False, num_return_sequences=1)
+DEFAULT_GEN_CONFIG = dict(max_new_tokens=256, min_new_tokens=1, do_sample=False, num_return_sequences=1)
 
 # —— 答案抽取 ——
 _OPTIONS = ["A", "B", "C", "D", "E", "F", "G"]
