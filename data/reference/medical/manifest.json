@@ -4,6 +4,7 @@
     {
       "id": "cmb-train-alpaca",
       "name": "CMB 医师考试训练集（Alpaca）",
+      "dataType": "选择题",
       "format": "alpaca",
       "file": "cmb_train_alpaca.jsonl",
       "source": {

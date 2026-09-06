@@ -21,6 +21,7 @@ export interface ProcessStep {
 export interface Dataset {
   id: string
   name: string
+  dataType?: string
   format?: string
   version?: string
   rows?: number

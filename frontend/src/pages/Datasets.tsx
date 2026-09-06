@@ -24,11 +24,6 @@ type Phase = 'idle' | 'inspecting' | 'inspected' | 'processing' | 'done'
 
 const fmt = (n: number) => n.toLocaleString('zh-CN')
 
-const FORMAT_LABELS: Record<string, string> = {
-  alpaca: 'Alpaca',
-  'cmb-exam-choice': '选择题',
-}
-const formatLabel = (f?: string) => (f ? FORMAT_LABELS[f] || f : '—')
 
 export default function Datasets() {
   const { domain } = useOutletContext<{ domain: Domain }>()
@@ -269,7 +264,7 @@ export default function Datasets() {
                 <tr key={d.id} style={{ cursor: 'pointer', background: selected?.id === d.id ? 'color-mix(in srgb, var(--accent) 5%, white)' : undefined }} onClick={() => setSelected(d)}>
                   <td style={{ fontWeight: 600 }}>{d.name}</td>
                   <td className="num">{d.rows != null ? fmt(d.rows) : '—'}</td>
-                  <td>{formatLabel(d.format)}</td>
+                  <td>{d.dataType || '—'}</td>
                   <td>
                     <button className="btn ghost sm" onClick={() => chooseForTrain(`ref:${d.id}`, d.name, 'reference')} disabled={chosenId === `ref:${d.id}` || prepareStatus === 'running'}>
                       {chosenId === `ref:${d.id}` ? '已选择' : '选择'}
