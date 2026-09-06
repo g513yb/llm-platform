@@ -362,6 +362,9 @@ def _resolve_dataset_path(dataset_id: str, domain: str) -> str | None:
 @app.post("/api/train")
 async def start_training(req: TrainRequest):
     global current_model_path
+    for job in training.list_jobs():
+        if job.get("status") in ("运行中", "等待"):
+            return {"error": "已有训练任务在运行，请等待完成或先终止"}
     dataset_path = _resolve_dataset_path(req.datasetId, req.domain)
     if not dataset_path:
         return {"error": "数据集不存在，请先在数据集管理页选择数据集"}

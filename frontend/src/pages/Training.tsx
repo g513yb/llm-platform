@@ -26,6 +26,7 @@ export default function Training() {
   const { domain } = useOutletContext<{ domain: Domain }>()
   const [tasks, setTasks] = useState<TrainTask[]>([])
   const [created, setCreated] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [trainDataset] = useState<{ datasetId: string; label: string; source: string } | null>(() => {
     try {
       const raw = sessionStorage.getItem(`train-dataset:${domain.id}`)
@@ -68,6 +69,7 @@ export default function Training() {
     const batchNum = parseInt(form.batch)
     if (isNaN(batchNum) || batchNum < 1) { setErrMsg('批大小须为 ≥1 的整数'); return }
     setErrMsg('')
+    setSubmitting(true)
     const taskName = form.name.trim()
     const datasetLabel = trainDataset?.label || '本地数据集'
     setCreated(true)
@@ -93,6 +95,8 @@ export default function Training() {
       await refreshJobs()
     } catch {
       setErrMsg('启动训练失败：无法连接本地服务')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -170,7 +174,7 @@ export default function Training() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <button className="btn primary" onClick={create}>启动训练任务</button>
+            <button className="btn primary" onClick={create} disabled={submitting}>{submitting ? '启动中…' : '启动训练任务'}</button>
             {created && <span style={{ color: 'var(--ok)', fontSize: 12.5, fontWeight: 600 }}>✓ 任务已加入队列</span>}
           </div>
           {errMsg && <div className="login-error" style={{ marginTop: 10 }}>{errMsg}</div>}
