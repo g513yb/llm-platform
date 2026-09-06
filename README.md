@@ -80,7 +80,7 @@ llm-platform/
 ├── requirements.txt           # 云端运行依赖（不重装 AutoDL 自带 CUDA torch）
 ├── run.sh                     # AutoDL 启动脚本（cd server && python app.py）
 ├── start_app.sh               # 云端后台启动脚本（setsid 脱离会话）
-├── deploy.sh                  # 一键让云端 git clone/pull 同步代码 + 装依赖 + 后台启动 / 看日志
+
 └── docs/                      # 文档
     ├── DATASETS.md            # 数据集用法
     └── 开发环境配置说明.md     # 部署与环境
@@ -89,8 +89,11 @@ llm-platform/
 ## 快速开始
 
 ### 云端（AutoDL）
-1. **同步代码**：代码不经本地直传，统一走 GitHub 远程仓库。本机先 `git push origin main`，再 `./deploy.sh` 通过 ssh 让云端 **浅克隆 + 稀疏检出**（`--depth=1` + `git sparse-checkout`，仅拉运行所需、排除 `docs/`/测试/本机脚本等）到 `/root/autodl-tmp/llm-platform`（数据盘）。
-2. **一键部署**（`./deploy.sh` 已含同步 + 装依赖；也可单独云端手启）：
+1. **同步代码**：代码不经本地直传，统一走 GitHub 远程仓库。本机 `git push origin <branch>` + `git push github <branch>` 后，ssh 让云端拉取（完整命令见 memory `project_cloud_sync_commands`）：
+   ```bash
+   ssh autodl 'source /etc/network_turbo && cd /root/autodl-tmp/llm-platform && git fetch origin <branch> && git reset --hard origin/<branch>'
+   ```
+2. **装依赖 + 启动**（云端手启，或 ssh 远程调 start_app.sh）：
    ```bash
    cd /root/autodl-tmp/llm-platform && bash run.sh
    # = pip install -r requirements.txt && cd server && python app.py
@@ -164,7 +167,7 @@ print(res.kept, res.dropped, res.type_counts, res.output_files)   # 落盘 data/
 - **无卡能看到数据处理但点对话报错**：正常，属预期。
 - **首次权重下载慢**：AutoDL 开「学术加速」。
 - **版本冲突**：AutoDL 镜像 torch 较旧时，去掉 `requirements.txt` 里 `transformers` 的版本号再 `pip install -U transformers fastapi accelerate`。
-- **本地改代码要上云**：`git push origin main` 后 `./deploy.sh`（云端 git pull 同步 + 装依赖）+ `./deploy.sh start` 重启；`./deploy.sh logs` 看日志。
+- **本地改代码要上云**：`git push origin <branch>` + `git push github <branch>` 后，ssh 让云端 `git fetch + reset --hard`（带学术加速）+ 装依赖 + 重启；完整命令见 memory `project_cloud_sync_commands`。
 
 ## 路线图
 

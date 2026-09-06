@@ -26,7 +26,7 @@ FastAPI + React(Vite/TS) + PyTorch + HuggingFace Transformers + PEFT(LoRA) 的�
 - `docs/DATASETS.md`（数据集用法）、`docs/开发环境配置说明.md`（部署与环境）。
 
 ## 常用命令
-- 云端部署（本机）：先 `git push origin main`，再 `./deploy.sh`（ssh 让云端 `git clone/pull` 远程仓库同步代码 + 装依赖）、`./deploy.sh start`（后台启动）、`./deploy.sh logs`（看日志）；本机 `ssh -N -L 8000:localhost:8000 autodl` 转发后端，前端本地 `npm run dev` 联调或托管 `dist/`。代码不本地直传，统一走 GitHub 仓库；浅克隆 `--depth=1` + 稀疏检出仅拉运行所需（`SPARSE_PATHS` 白名单，排除 docs/测试/本机脚本等）。
+- 云端同步（deploy.sh 已删，改用 ssh 直连，完整命令见 memory `project_cloud_sync_commands`）：本机 `git push origin <branch>` + `git push github <branch>` → 云端 `ssh autodl 'source /etc/network_turbo && cd /root/autodl-tmp/llm-platform && git fetch origin <branch> && git reset --hard origin/<branch>'` → 装依赖 `ssh autodl '... && pip install -r requirements.txt -q'` → 重启 `ssh autodl 'cd /root/autodl-tmp/llm-platform && setsid nohup bash start_app.sh > app.log 2>&1 < /dev/null & echo started'` → 查日志 `ssh autodl 'tail -20 /root/autodl-tmp/llm-platform/app.log'`。本机 `ssh -N -L 8000:localhost:8000 autodl` 转发后端，前端本地 `npm run dev` 联调或托管 `dist/`。
 - 云端手启：`bash run.sh` 或 `bash start_app.sh`。
 - 本机无窗口启停（华为云码道 IDE）：`./start-dev.ps1`（后台启前后端 + 日志落文件）、`./start-dev.ps1 -Stop`（停）。避免弹终端窗口。
 - **本地纯 CPU 验证**（无需 GPU/云）：`cd D:\VscodeWorkplace\llm-platform && PYTHONIOENCODING=utf-8 .venv-verify/Scripts/python -c "import sys; sys.path.insert(0,'server'); from data_pipeline import run_pipeline; ..."`（`.venv-verify` 仅 pandas/numpy）。

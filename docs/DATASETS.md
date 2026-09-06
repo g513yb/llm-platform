@@ -27,8 +27,9 @@ llm-platform 的「数据处理」可直接读取阿里/清华等来源的**医�
 - **云端一键流水线**（下载→重建 fixtures→跑测试→可视化报告）：
   ```bash
   git add -A && git commit -m "..." && git push origin main
-  ./deploy.sh datatest      # 云端运行 tests/cloud_run.sh
-  ./deploy.sh report        # 转发端口，浏览器打开 http://localhost:8899/report.html
+  ssh autodl 'source /etc/network_turbo && cd /root/autodl-tmp/llm-platform && git fetch origin main && git reset --hard origin/main'
+  ssh autodl 'cd /root/autodl-tmp/llm-platform && bash tests/cloud_run.sh'   # 云端运行测试流水线
+  # 转发端口后浏览器打开 http://localhost:8899/report.html
   ```
 - 特性：幂等（已下载跳过，`.done.json` + `--force` 重下）、断点续传 `.part`、失败指数退避重试、逐源进度、
   单源失败不阻断其它、末尾 `manifest.json` 汇总；HuggingFace 源走 HF resolve URL 直下（零第三方依赖），

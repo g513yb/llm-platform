@@ -12,8 +12,10 @@ PYTHONIOENCODING=utf-8 .venv-verify/Scripts/python -m pytest tests/test_readers.
 
 ### 云端流水线（下载真实数据 → 测试 → 可视化报告）
 ```bash
-git push origin main && ./deploy.sh datatest   # 云端一键：下载→测试→报告
-./deploy.sh report                              # 端口转发浏览器查看 report.html
+git push origin main
+ssh autodl 'source /etc/network_turbo && cd /root/autodl-tmp/llm-platform && git fetch origin main && git reset --hard origin/main'
+ssh autodl 'cd /root/autodl-tmp/llm-platform && bash tests/cloud_run.sh'   # 云端一键：下载→测试→报告
+ssh -N -L 8899:localhost:8899 autodl   # 端口转发浏览器查看 report.html
 ```
 流水线 = `tests/cloud_run.sh`：`download_datasets.py --all`（幂等）→ `run_and_report.py`（自包含 HTML+JSON 报告）。下载的原始数据落 `tests/fixtures/_downloads/`，**不入库**（见 .gitignore）。
 
