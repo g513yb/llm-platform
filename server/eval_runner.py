@@ -190,7 +190,7 @@ def run_inference_batch(model, tokenizer, prompts: list[str], gen_config: dict) 
         tokenizer.padding_side = orig_padding_side
 
 
-def score_layered(items: list[dict], wrong_limit: int = 200) -> dict:
+def score_layered(items: list[dict], wrong_limit: int = 50) -> dict:
     """⑪⑫ 分层准确率。
 
     items: 每条含 id/exam_type/exam_class/question_type/answer(真值)/model_answer。

@@ -236,7 +236,10 @@ export default function Evaluation() {
 
       {result && (
         <div className="card" style={{ marginTop: 18 }}>
-          <h3>分层准确率 · {result.task_id}</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0 }}>分层准确率 · {result.task_id}</h3>
+            <button className="btn ghost sm" onClick={() => { setResult(null); setSelectedId(null) }}>收起</button>
+          </div>
           <p className="card-sub">按 exam_type → exam_class 二级聚合，父类为子类算术平均</p>
           <div className="tbl-scroll">
             <table className="tbl">
@@ -258,7 +261,7 @@ export default function Evaluation() {
           </div>
           {result.result.wrong_items.length > 0 && (
             <>
-              <h4 style={{ marginTop: 18 }}>错题示例{result.result.wrong_truncated ? '（前 200 条）' : ''}</h4>
+              <h4 style={{ marginTop: 18 }}>错题示例（{result.result.wrong_items.length} 条{result.result.wrong_truncated ? '，已截断' : ''}）</h4>
               <div className="tbl-scroll">
                 <table className="tbl">
                   <thead><tr><th>id</th><th>exam_type</th><th>exam_class</th><th>题型</th><th>标准答案</th><th>模型答案</th></tr></thead>
