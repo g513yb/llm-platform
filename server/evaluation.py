@@ -4,11 +4,14 @@
 adapter 切换由前端先调 /api/adapters/load 完成，评测任务用当前挂载的权重。
 """
 import json
+import logging
 import os
 import random
 import shutil
 import threading
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 from eval_runner import (
     DEFAULT_ANSWER_PATH,
@@ -39,10 +42,12 @@ def _save_jobs():
     try:
         with JOBS_LOCK:
             data = {k: {kk: vv for kk, vv in v.items() if kk != "stop"} for k, v in JOBS.items()}
-        with open(JOBS_PATH, "w", encoding="utf-8") as f:
+        tmp = JOBS_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, JOBS_PATH)
     except Exception:
-        pass
+        logger.exception("保存 eval_jobs.json 失败")
 
 
 def _load_jobs():
@@ -59,7 +64,7 @@ def _load_jobs():
                 j["stop"] = False
                 JOBS[tid] = j
     except Exception:
-        pass
+        logger.exception("加载 eval_jobs.json 失败")
 
 
 _load_jobs()

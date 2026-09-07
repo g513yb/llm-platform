@@ -1,11 +1,14 @@
 import functools
 import gc
 import json
+import logging
 import os
 import shutil
 import threading
 from datetime import datetime
 
+
+logger = logging.getLogger(__name__)
 
 
 from config import MODEL_NAME, MODEL_SHORT_NAME, DEFAULT_DEVICE_MAP, TRAIN_QUANTIZATION
@@ -31,10 +34,12 @@ def _save_jobs():
     try:
         with JOBS_LOCK:
             data = {k: {kk: vv for kk, vv in v.items() if kk != "stop"} for k, v in JOBS.items()}
-        with open(JOBS_PATH, "w", encoding="utf-8") as f:
+        tmp = JOBS_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, JOBS_PATH)
     except Exception:
-        pass
+        logger.exception("保存 jobs.json 失败")
 
 
 def _load_jobs():
@@ -51,7 +56,7 @@ def _load_jobs():
                 j["stop"] = False
                 JOBS[tid] = j
     except Exception:
-        pass
+        logger.exception("加载 jobs.json 失败")
 
 
 _load_jobs()
@@ -65,10 +70,16 @@ def register_adapter(info):
                 with open(INDEX_PATH, "r", encoding="utf-8") as f:
                     index = json.load(f)
             except Exception:
+                logger.exception("读取 adapters/index.json 失败，将覆盖重建")
                 index = []
         index.append(info)
-        with open(INDEX_PATH, "w", encoding="utf-8") as f:
-            json.dump(index, f, ensure_ascii=False, indent=2)
+        try:
+            tmp = INDEX_PATH + ".tmp"
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(index, f, ensure_ascii=False, indent=2)
+            os.replace(tmp, INDEX_PATH)
+        except Exception:
+            logger.exception("写入 adapters/index.json 失败")
 
 
 def list_adapters():
@@ -78,6 +89,7 @@ def list_adapters():
         with open(INDEX_PATH, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
+        logger.exception("读取 adapters/index.json 失败")
         return []
 
 
